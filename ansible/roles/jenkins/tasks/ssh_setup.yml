@@ -77,6 +77,7 @@
     marker="# {mark} ANSIBLE MANAGED BLOCK - {{item.ssh_config_host}}"
     content='Host {{item.ssh_config_host}}\n  Hostname {{item.hostname}}\n  IdentityFile ~/.ssh/distkeys/{{item.private_keyfile}}'
   with_items: hostvars.localhost.distribution_keys
+  when: hostvars.localhost.distribution_keys.0 is defined
 
 - name: ensure that known_hosts contains hashes for hosts that we will interact with
   sudo: yes
