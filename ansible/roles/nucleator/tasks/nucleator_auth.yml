@@ -35,6 +35,7 @@
     path=~/.ssh/distkeys
     state=directory
     mode=0700
+  when: hostvars.localhost.distribution_keys.0 is defined
 
 - name: install specified distribution keys
   copy:

@@ -45,6 +45,7 @@
     path={{ jenkins_user_home | osPathJoin('.ssh', 'distkeys')}}
     state=directory
     mode=0700
+  when: hostvars.localhost.distribution_keys.0 is defined
 
 - name: copy distkeys to remote host
   sudo: yes
@@ -56,6 +57,7 @@
     group='{{ jenkins_user }}'
     follow=yes
     mode=0400
+  when: hostvars.localhost.distribution_keys.0 is defined
 
 - name: copy the ssh config file
   sudo: yes
