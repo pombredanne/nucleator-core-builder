@@ -1,0 +1,28 @@
+{
+    "customers": [
+        {
+            "name": "47lining",
+            "cages": [
+                {
+                    "name": "build",
+                    "containers": [
+                        {
+                            "name": "Test",
+                            "type": "builder"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "agilecorp.biz",
+            "cages": [
+                {
+                    "name": "ci",
+                    "containers": [
+                    ]
+                }
+            ]
+        }
+    ]
+}

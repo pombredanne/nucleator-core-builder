@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+<project>
+  <actions/>
+  <description>Collect information sufficient to create the projects necessary to manage a beanstalk application and its containers</description>
+  <displayName>Create Beanstalk Application</displayName>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>ApplicationType</name>
+          <description>What type of application will be developed?</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>java</string>
+              <string>python</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ApplicationName</name>
+          <description>The name of the application</description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>GitRepoPath</name>
+          <description>The path for cloning the Git repo</description>
+          <defaultValue>{{ SampleProjectRepoUrl }}</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ApplicationPath</name>
+          <description>The path to the application in the above named Git repo (for a Java application, specify the pom.xml file)</description>
+          <defaultValue>pom.xml</defaultValue>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>echo $ApplicationType $ApplicationName $GitRepoPath $ApplicationPath
+export REPO_HOME=$JENKINS_HOME/nucleator
+export ARTIFACTORY_URL="{{ 'https://artifactory.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain }}"
+export JENKINS_URL={{ jenkins_url }}
+export NUI_PWD={{ hostvars.localhost.nucleator_userinterface.password }}
+export NUI_USER={{ hostvars.localhost.nucleator_userinterface.user }}
+python $REPO_HOME/scripts/makeappjobs.py beanstalk $ApplicationType $ApplicationName $GitRepoPath $ApplicationPath $ARTIFACTORY_URL
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

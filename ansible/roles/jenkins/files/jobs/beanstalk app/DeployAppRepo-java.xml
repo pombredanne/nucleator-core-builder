@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+<maven2-moduleset plugin="maven-plugin@2.8">
+  <actions/>
+  <description>Builds the application and save the artifacts in the repository for later deployment to a stacket</description>
+  <displayName>Deploy app to Repo $ApplicationName</displayName>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git@2.3.4">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>$GitRepoPath</url>
+        <credentialsId/>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/master</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="list"/>
+    <extensions>
+      <hudson.plugins.git.extensions.impl.SparseCheckoutPaths>
+        <sparseCheckoutPaths>
+          <hudson.plugins.git.extensions.impl.SparseCheckoutPath>
+            <path>$PomPathOnly</path>
+          </hudson.plugins.git.extensions.impl.SparseCheckoutPath>
+        </sparseCheckoutPaths>
+      </hudson.plugins.git.extensions.impl.SparseCheckoutPaths>
+      <hudson.plugins.git.extensions.impl.RelativeTargetDirectory>
+        <relativeTargetDir></relativeTargetDir>
+      </hudson.plugins.git.extensions.impl.RelativeTargetDirectory>
+    </extensions>
+  </scm>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <customWorkspace>applications/$ApplicationName</customWorkspace>
+  <rootModule>
+    <groupId></groupId>
+    <artifactId></artifactId>
+  </rootModule>
+  <rootPOM>$PomPath</rootPOM>
+  <goals>clean package</goals>
+  <mavenOpts>-Xmx12048m  -XX:MaxPermSize=512m</mavenOpts>
+  <aggregatorStyleBuild>true</aggregatorStyleBuild>
+  <incrementalBuild>false</incrementalBuild>
+  <ignoreUpstremChanges>true</ignoreUpstremChanges>
+  <archivingDisabled>true</archivingDisabled>
+  <siteArchivingDisabled>false</siteArchivingDisabled>
+  <fingerprintingDisabled>false</fingerprintingDisabled>
+  <resolveDependencies>false</resolveDependencies>
+  <processPlugins>false</processPlugins>
+  <mavenValidationLevel>-1</mavenValidationLevel>
+  <runHeadless>true</runHeadless>
+  <disableTriggerDownstreamProjects>false</disableTriggerDownstreamProjects>
+  <blockTriggerWhenBuilding>true</blockTriggerWhenBuilding>
+  <settings class="jenkins.mvn.DefaultSettingsProvider"/>
+  <globalSettings class="jenkins.mvn.DefaultGlobalSettingsProvider"/>
+  <reporters/>
+  <publishers>
+    <org.jfrog.hudson.ArtifactoryRedeployPublisher plugin="artifactory@2.2.5">
+      <evenIfUnstable>false</evenIfUnstable>
+      <details>
+        <artifactoryName>-844406945@1418358707405</artifactoryName>
+        <repositoryKey>libs-release-local</repositoryKey>
+        <snapshotsRepositoryKey>libs-snapshot-local</snapshotsRepositoryKey>
+        <artifactoryUrl>$ArtifactoryUrl</artifactoryUrl>
+        <stagingPlugin>
+          <pluginName>None</pluginName>
+        </stagingPlugin>
+        <userPluginKey>None</userPluginKey>
+      </details>
+      <deployArtifacts>true</deployArtifacts>
+      <artifactDeploymentPatterns>
+        <includePatterns>**/*.war</includePatterns>
+        <excludePatterns></excludePatterns>
+      </artifactDeploymentPatterns>
+      <includeEnvVars>false</includeEnvVars>
+      <envVarsPatterns>
+        <includePatterns></includePatterns>
+        <excludePatterns>*password*,*secret*</excludePatterns>
+      </envVarsPatterns>
+      <runChecks>false</runChecks>
+      <violationRecipients></violationRecipients>
+      <includePublishArtifacts>false</includePublishArtifacts>
+      <passIdentifiedDownstream>false</passIdentifiedDownstream>
+      <scopes></scopes>
+      <licenseAutoDiscovery>true</licenseAutoDiscovery>
+      <disableLicenseAutoDiscovery>false</disableLicenseAutoDiscovery>
+      <discardOldBuilds>false</discardOldBuilds>
+      <discardBuildArtifacts>true</discardBuildArtifacts>
+      <matrixParams></matrixParams>
+      <enableIssueTrackerIntegration>false</enableIssueTrackerIntegration>
+      <allowPromotionOfNonStagedBuilds>false</allowPromotionOfNonStagedBuilds>
+      <filterExcludedArtifactsFromBuild>false</filterExcludedArtifactsFromBuild>
+      <recordAllDependencies>false</recordAllDependencies>
+      <deployBuildInfo>false</deployBuildInfo>
+      <aggregateBuildIssues>false</aggregateBuildIssues>
+      <blackDuckRunChecks>false</blackDuckRunChecks>
+      <blackDuckAppName></blackDuckAppName>
+      <blackDuckAppVersion></blackDuckAppVersion>
+      <blackDuckReportRecipients></blackDuckReportRecipients>
+      <blackDuckScopes></blackDuckScopes>
+      <blackDuckIncludePublishedArtifacts>false</blackDuckIncludePublishedArtifacts>
+      <autoCreateMissingComponentRequests>true</autoCreateMissingComponentRequests>
+      <autoDiscardStaleComponentRequests>true</autoDiscardStaleComponentRequests>
+    </org.jfrog.hudson.ArtifactoryRedeployPublisher>
+  </publishers>
+  <buildWrappers/>
+  <prebuilders/>
+  <postbuilders/>
+  <runPostStepsIfResult>
+    <name>SUCCESS</name>
+    <ordinal>0</ordinal>
+    <color>BLUE</color>
+    <completeBuild>true</completeBuild>
+  </runPostStepsIfResult>
+</maven2-moduleset>

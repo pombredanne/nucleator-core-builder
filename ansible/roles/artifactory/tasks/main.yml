@@ -1,0 +1,71 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+  - include_vars: main.yml
+
+  - name: Install dependencies
+    sudo: yes
+    action: "{{ ansible_pkg_mgr }} pkg={{ item }} state=installed"
+    with_items: artifactory.{{ ansible_os_family}}.dependencies
+
+  - name: artifactory | Ensure there is a done directory
+    file: path="{{ artifactory_done_dir }}" state=directory owner=root group=root
+    sudo: yes
+
+  - name: artifactory | Download artifactory zip
+    get_url: url="{{ artifactory_zip_url }}" dest="{{ artifactory_zip_dir }}" mode=0640
+
+  - name: artifactory | Extract artifactory
+    command: unzip {{ artifactory_zip_file_path }} -d {{ artifactory_dir }} creates="{{ artifactory_version_dir }}"
+    sudo: yes
+
+  #
+  # This step unzips from the source machine... preferring to Download
+  #
+  #- name: artifactory | Extract artifactory
+  #  unarchive: src="{{ artifactory_zip_file }}" dest="{{ artifactory_dir }}" creates="{{ artifactory_version_dir }}"
+  #  sudo: yes
+
+  - name: artifactory | Install artifactory service
+    shell: "{{ artifactory_version_dir }}/bin/installService.sh && touch {{ artifactory_done_dir }}/install-service creates={{ artifactory_done_dir }}/install-service"
+    sudo: yes
+
+  - name: artifactory | Make etc directory
+    file: path=/etc/opt/jfrog/artifactory state=directory owner="{{ artifactory_user }}" group="{{ artifactory_user }}"
+    sudo: yes
+
+  - name: artifactory | Set artifactory config
+    template: src=root/etc/opt/jfrog/artifactory.j2 dest=/etc/opt/jfrog/artifactory/default
+    sudo: yes
+
+  - name: Update /etc/security/limits.conf file (1/2)
+    sudo: yes
+    lineinfile: dest=/etc/security/limits.conf
+                insertbefore='# End of file'
+                line='{{ artifactory_user }} soft nofile 32000'
+                state=present
+
+  - name: Update /etc/security/limits.conf file (2/2)
+    sudo: yes
+    lineinfile: dest=/etc/security/limits.conf
+              insertbefore='# End of file'
+              line='{{ artifactory_user }} hard nofile 32000'
+              state=present
+
+  - name: Reconfigure Tomcat for SSL
+    include: ssl-setup.yml
+
+  - name: artifactory | Start/Restart artifactory
+    service: name=artifactory state=restarted
+    sudo: yes

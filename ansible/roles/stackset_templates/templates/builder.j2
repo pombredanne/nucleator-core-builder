@@ -1,0 +1,192 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Provision a nucleator-builder stackset.  The stackset includes instances for Nucleator UI, Nucleator and Artifactory.  The stackset includes dedicated, tagged persistent EBS Volumes for local data storage for each of the Nucleator UI, Nucleator and Artifactory instances.  Nucleator UI and Artifactory are launched in the public subnet, Nucleator in the private subnet.  ssh comms for all instances must transit the bastion instance in the Cage where the Stackset is provisioned.",
+    "Parameters": {
+        "KeypairName": {
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access via bastion to all resulting instances",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "255",
+            "AllowedPattern": "[\\x20-\\x7E]*",
+            "ConstraintDescription": "can contain only ASCII characters."
+        },
+        "NucleatorAgentRole": {
+            "Type": "String",
+            "Description": "Name of the Role to use to establish an Instance Profile for assumption of NucleatorAgent Role"
+        }
+    },
+    "Mappings": {
+        "AZMap": {{ aws_accounts[account_name]["map_region_plus_redundant_zone_number_to_vpc_valid_az"] | to_json }},
+        "AWSInstanceType2Arch": {{ map_aws_instance_type_to_architecture|to_json }},
+        "AWSRegionArch2WorkerAMI": {{ map_aws_region_plus_arch_to_worker_ami|to_json }}
+    },
+    "Resources": {
+        "NucleatorInstance": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "{{template_s3_accessor_url}}/{{stackset_instance_name}}private_instance.json",
+                "Parameters": {
+                    "PrivateInstanceName": "nucleator",
+                    "NucleatorGroup": "nucleator",
+                    "InstanceType": "{{ nucleator_instance_type }}",
+                    "KeypairName": {
+                        "Ref": "KeypairName"
+                    },
+                    "ImageId": {
+                        "Fn::FindInMap": [
+                            "AWSRegionArch2WorkerAMI",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            {
+                                "Fn::FindInMap": [
+                                    "AWSInstanceType2Arch",
+				    "{{ nucleator_instance_type }}",
+                                    "Arch"
+                                ]
+                            }
+                        ]
+                    },
+                    "ServiceRole": { "Ref": "NucleatorAgentRole" }
+                }
+            }
+        },
+	{{ nucleator.cage_extension_resources | to_json_fragment }},
+        "NucleatorUIInstance": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "{{template_s3_accessor_url}}/{{stackset_instance_name}}public_instance.json",
+                "Parameters": {
+                    "PublicInstanceName": "nucleator-ui",
+                    "NucleatorGroup": "nucleator-ui",
+                    "InstanceType": "{{ nucleatorui_instance_type }}",
+                    "KeypairName": {
+                        "Ref": "KeypairName"
+                    },
+                    "ImageId": {
+                        "Fn::FindInMap": [
+                            "AWSRegionArch2WorkerAMI",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            {
+                                "Fn::FindInMap": [
+                                    "AWSInstanceType2Arch",
+				    "{{ nucleatorui_instance_type }}",
+                                    "Arch"
+                                ]
+                            }
+                        ]
+                    },
+                    "ServiceRole": "None"
+                }
+            }
+        },
+	{{ nucleatorui.cage_extension_resources | to_json_fragment }},
+        "ArtifactoryInstance": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "{{template_s3_accessor_url}}/{{stackset_instance_name}}public_instance.json",
+                "Parameters": {
+                    "PublicInstanceName": "artifactory",
+                    "NucleatorGroup": "artifactory",
+                    "InstanceType": "{{ artifactory_instance_type }}",
+                    "KeypairName": {
+                        "Ref": "KeypairName"
+                    },
+                    "ImageId": {
+                        "Fn::FindInMap": [
+                            "AWSRegionArch2WorkerAMI",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            {
+                                "Fn::FindInMap": [
+                                    "AWSInstanceType2Arch",
+				    "{{ artifactory_instance_type }}",
+                                    "Arch"
+                                ]
+                            }
+                        ]
+                    },
+                    "ServiceRole": "None"
+		}
+	    }
+        },
+	{{ artifactory.cage_extension_resources | to_json_fragment }}
+    },
+    "Outputs": {
+        "NucleatorInstanceId": {
+	    "Description": "IP Address of the Nucleator host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "NucleatorInstance",
+		    "Outputs.InstanceId"
+                ]
+	    }
+        },
+        "NucleatorSecurityGroupId": {
+	    "Description": "Security Group ID for the Nucleator host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "NucleatorInstance",
+		    "Outputs.PrivateSubnetSecurityGroupId"
+                ]
+	    }
+        },
+        "NucleatorUIInstanceId": {
+	    "Description": "IP Address of the Nucleator UI host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "NucleatorUIInstance",
+		    "Outputs.InstanceId"
+                ]
+	    }
+        },
+        "NucleatorUIPublicIp": {
+	    "Description": "IP Address of the Nucleator UI host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "NucleatorUIInstance",
+		    "Outputs.PublicIp"
+                ]
+	    }
+        },
+        "NucleatorUISecurityGroupId": {
+	    "Description": "Security Group ID for the Nucleator UI host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "NucleatorUIInstance",
+		    "Outputs.PublicSubnetSecurityGroupId"
+                ]
+	    }
+        },
+        "ArtifactoryInstanceId": {
+	    "Description": "IP Address of the Artifactory host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "ArtifactoryInstance",
+		    "Outputs.InstanceId"
+                ]
+	    }
+        },
+        "ArtifactoryPublicIp": {
+	    "Description": "IP Address of the Artifactory host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "ArtifactoryInstance",
+		    "Outputs.PublicIp"
+                ]
+	    }
+        },
+        "ArtifactorySecurityGroupId": {
+	    "Description": "Security Group ID for the Artifactory host",
+	    "Value": {
+	    	"Fn::GetAtt": [
+		    "ArtifactoryInstance",
+		    "Outputs.PublicSubnetSecurityGroupId"
+                ]
+	    }
+        }
+    }
+}

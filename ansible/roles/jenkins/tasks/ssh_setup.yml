@@ -1,0 +1,161 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+#- name: Set default
+#  command: /bin/true
+#  register: config_needs_tweaked
+# Because the jenkins process is running as root (to let it use port 443),
+# we need to put the .ssh stuff in root's home (jenkins_user_home)
+
+- name: assure .ssh exists as dir
+  sudo: yes
+  file:
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    path={{ jenkins_user_home | osPathJoin('.ssh')}}
+    state=directory
+    mode=0700
+
+- name: copy key pair to remote host
+  sudo: yes
+  copy:
+    src={{ nucleator_configuration_dir}}/{{hostvars.localhost.keypair_name}}.pem
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    dest={{ jenkins_user_home | osPathJoin('.ssh', hostvars.localhost.keypair_name ~ '.pem') }}
+    mode=0400
+
+- name: assure .ssh/distkeys exists as dir
+  sudo: yes
+  file:
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    path={{ jenkins_user_home | osPathJoin('.ssh', 'distkeys')}}
+    state=directory
+    mode=0700
+
+- name: copy distkeys to remote host
+  sudo: yes
+  ignore_errors: true
+  copy:
+    src={{nucleator_configuration_dir | osPathJoin('distkeys', '') }}
+    dest={{ jenkins_user_home | osPathJoin('.ssh', 'distkeys') }}
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    follow=yes
+    mode=0400
+
+- name: copy the ssh config file
+  sudo: yes
+  template:
+    src=ssh-config.j2
+    dest="{{ jenkins_user_home | osPathJoin('.ssh', 'config') }}"
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    mode=0600
+
+- name: ensure that IdentifyFile for each Host is specified.
+  sudo: yes
+  blockinfile:
+    dest="{{ jenkins_user_home | osPathJoin('.ssh', 'config') }}"
+    mode=0600
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    create=yes
+    marker="# {mark} ANSIBLE MANAGED BLOCK - {{item.ssh_config_host}}"
+    content='Host {{item.ssh_config_host}}\n  Hostname {{item.hostname}}\n  IdentityFile ~/.ssh/distkeys/{{item.private_keyfile}}'
+  with_items: hostvars.localhost.distribution_keys
+
+- name: ensure that known_hosts contains hashes for hosts that we will interact with
+  sudo: yes
+  lineinfile:
+    dest="{{ jenkins_user_home | osPathJoin('.ssh', 'known_hosts') }}"
+    mode=0600
+    state=present
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    create=yes
+    insertbefore=BOF
+    regexp='^{{item.value | regex_escape}}$'
+    line='{{item.value}}'
+  with_dict:
+    hostvars.localhost.known_hosts
+
+- name: configure known_hosts for bastion (Note the '>>')
+  shell: ssh-keyscan -t rsa,dsa {{ hostvars['bastion.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain]['ec2_private_ip_address'] }} >> {{ jenkins_user_home | osPathJoin('.ssh', 'known_hosts') }}
+  sudo: yes
+
+- name: configure known_hosts for nucleator (Note the '>>')
+  shell: ssh-keyscan -t rsa,dsa {{ hostvars['nucleator.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain]['ec2_private_ip_address'] }} >> {{ jenkins_user_home | osPathJoin('.ssh', 'known_hosts') }}
+  sudo: yes
+
+- name: Give ~/.ssh/known_hosts proper ownership
+  file:
+    path="{{ jenkins_user_home | osPathJoin('.ssh', 'known_hosts') }}"
+    state=file
+    owner='{{ jenkins_user }}'
+    group='{{ jenkins_user }}'
+    mode=0700
+  sudo: yes
+
+- name: Copy certificate
+  sudo: yes
+  copy:
+    src="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.crt') }}"
+    dest="{{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}}"
+    owner=jenkins
+    group=jenkins
+    mode=0644
+
+- name: Delete existing keystore
+  file: path={{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} state=absent
+  sudo: yes
+
+- name: Delete existing Jenkins keystore
+  file:
+    path="{{ jenkins.lib | osPathJoin('secrets', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
+    state=absent
+  sudo: yes
+
+- name: Creating {{ customer_name ~ '-' ~ cage_name }} keystore
+  shell: "keytool -importkeystore -deststorepass {{ hostvars.localhost.jenkins_keystore_password }} -destkeypass {{ hostvars.localhost.jenkins_keystore_password }} -destkeystore {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} -srckeystore {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt' }} -srcstoretype PKCS12 -srcstorepass {{ hostvars.localhost.jenkins_keystore_password }} -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }}"
+  sudo: yes
+
+- name: Copy generated keystore to Jenkins lib
+  shell: "cp {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} {{ jenkins.lib | osPathJoin( 'secrets', customer_name ~ '-' ~ cage_name ~ '.keystore')}}"
+  sudo: yes
+
+- name: Set permissions on keystore
+  file:
+   path="{{ jenkins.lib | osPathJoin('secrets', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
+   state=file
+   owner=jenkins
+   group=jenkins
+   mode=0700
+  sudo: yes
+
+- name: Generate x509 for importing
+  shell: "openssl pkcs12 -in {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}} -clcerts -nokeys -passin pass:{{ hostvars.localhost.jenkins_keystore_password }} | openssl x509 > {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }}"
+  sudo: yes
+
+# Throws an error if the alias is already there, but that's ok
+- name: Deleting alias from /etc/pki/java/cacerts
+  shell: "keytool -delete -storepass changeit -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+  sudo: yes
+  ignore_errors: true
+
+- name: Updating /etc/pki/java/cacerts
+  shell: "keytool -importcert -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -file {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+  sudo: yes

@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+<hudson.maven.MavenModuleSet_-DescriptorImpl plugin="maven-plugin@2.8">
+  <globalMavenOpts>-Xmx2048m  -XX:MaxPermSize=512m</globalMavenOpts>
+  <mavenValidationLevels class="linked-hash-map">
+    <entry>
+      <string>DEFAULT</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>LEVEL_MINIMAL</string>
+      <int>0</int>
+    </entry>
+    <entry>
+      <string>LEVEL_MAVEN_2_0</string>
+      <int>20</int>
+    </entry>
+    <entry>
+      <string>LEVEL_MAVEN_3_0</string>
+      <int>30</int>
+    </entry>
+    <entry>
+      <string>LEVEL_MAVEN_3_1</string>
+      <int>31</int>
+    </entry>
+    <entry>
+      <string>LEVEL_STRICT</string>
+      <int>30</int>
+    </entry>
+  </mavenValidationLevels>
+  <localRepository class="hudson.maven.local_repo.DefaultLocalRepositoryLocator"/>
+</hudson.maven.MavenModuleSet_-DescriptorImpl>

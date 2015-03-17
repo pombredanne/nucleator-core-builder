@@ -1,0 +1,101 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+
+bastion_public_ip: '"{{ cage_provision_stack.stack_outputs.BastionIp }}"'
+
+nucleator_security_group_id: '{ "Fn::GetAtt": ["NucleatorInstance", "Outputs.PrivateSubnetSecurityGroupId" ] }'
+nucleator_public_ip: '{ "Fn::GetAtt": ["NucleatorInstance", "Outputs.PublicIp" ] }'
+
+nucleatorui_security_group_id: '{ "Fn::GetAtt": ["NucleatorUIInstance", "Outputs.PublicSubnetSecurityGroupId" ] }'
+
+artifactory_security_group_id: '{ "Fn::GetAtt": ["ArtifactoryInstance", "Outputs.PublicSubnetSecurityGroupId" ] }'
+artifactory_public_ip: '{ "Fn::GetAtt": ["ArtifactoryInstance", "Outputs.PublicIp" ] }'
+
+nucleator:
+  cage_extension_resources:
+    # nucleator box must be able to ssh to bastion for multiple provisioned cages
+    NucleatorToBastion:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleator_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "22"
+        ToPort: "22"
+        CidrIp: "0.0.0.0/0"
+    NucleatorToStash:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleator_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "7999"
+        ToPort: "7999"
+        CidrIp: "0.0.0.0/0"
+# TODO -  use proxied ssh via bastion instead of direct internal ssh
+    AcceptSshFromNucleatorUI:
+      Type: "AWS::EC2::SecurityGroupIngress"
+      Properties:
+        GroupId: "{{nucleator_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "22"
+        ToPort: "22"
+        SourceSecurityGroupId: "{{nucleatorui_security_group_id}}"
+    NucleatorToArtifactory:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleator_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "443"
+        ToPort: "443"
+        CidrIp: '{ "Fn::Join" : [ "/", [ {{artifactory_public_ip}}, "32" ] ] }'
+
+nucleatorui:
+  cage_extension_resources:
+    NucleatorUIWebIngess:
+      Type: "AWS::EC2::SecurityGroupIngress"
+      Properties:
+        GroupId: "{{nucleatorui_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "443"
+        ToPort: "443"
+        CidrIp: "0.0.0.0/0"
+    NucleatorUIWebEgress:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleatorui_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "443"
+        ToPort: "443"
+        CidrIp: '{ "Fn::Join" : [ "/", [ {{artifactory_public_ip}}, "32" ] ] }'
+    NucleatorUIToStash:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleatorui_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "7999"
+        ToPort: "7999"
+        CidrIp: "0.0.0.0/0"
+
+artifactory:
+  cage_extension_resources:
+    ArtifactoryWebIngess:
+      Type: "AWS::EC2::SecurityGroupIngress"
+      Properties:
+        GroupId: "{{artifactory_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "443"
+        ToPort: "443"
+        CidrIp: "0.0.0.0/0"
+

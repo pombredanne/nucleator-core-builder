@@ -1,0 +1,37 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#----------------------------------------#
+# Nucleator SSH Config                   #
+#----------------------------------------#
+Host *
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    LogLevel ERROR
+    TCPKeepAlive=yes
+    ServerAliveInterval 15
+    ServerAliveCountMax 16
+
+Host bastion
+    StrictHostKeyChecking no
+    Hostname {{ hostvars['bastion.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain]['ec2_private_ip_address']}}
+    User ec2-user
+    IdentityFile ~/.ssh/{{hostvars.localhost.keypair_name}}.pem
+
+Host nucleator
+    StrictHostKeyChecking no
+    Hostname {{ hostvars['nucleator.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain]['ec2_private_ip_address']}}
+    User ec2-user
+    IdentityFile ~/.ssh/{{hostvars.localhost.keypair_name}}.pem
+    ProxyCommand ssh -F ~/.ssh/config ec2-user@bastion nc %h %p

@@ -1,0 +1,114 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+# Because the jenkins process is running as root (to let it use port 443),
+# we need to put the .ssh stuff in root's home (jenkins_user_home)
+
+- name: assure .ssh exists as dir
+  sudo: yes
+  file:
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    path={{ artifactory_user_home | osPathJoin('.ssh')}}
+    state=directory
+    mode=0700
+
+- name: assure tomcat/conf/ssl exists as dir
+  sudo: yes
+  file:
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    path={{ artifactory_tomcat_home | osPathJoin('conf', 'ssl')}}
+    state=directory
+    mode=0700
+
+- name: copy key pair to remote host
+  sudo: yes
+  copy:
+    src={{ nucleator_configuration_dir | osPathJoin(hostvars.localhost.keypair_name ~ '.pem') }}
+    dest={{ artifactory_user_home | osPathJoin('.ssh', hostvars.localhost.keypair_name ~ '.pem') }}
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    mode=0400
+
+- name: Copy password_hash.py
+  copy: src=scripts/password_hash.py dest="/tmp/password_hash.py"
+
+- name: Calculate admin password hash
+  shell: python /tmp/password_hash.py CAFEBABEEBABEFAC {{ hostvars.localhost.artifactory_userinterface.password }}
+  register: password_hash
+
+- name: Copy security bootstrap file
+  sudo: yes
+  template: src=security.xml.j2 dest={{ artifactory_version_dir }}/etc/security.import.xml owner={{ artifactory_user }} group={{ artifactory_user }} mode=0644
+
+- name: Configure the server.xml to add the SSL Connector
+  sudo: yes
+  template:
+    src=server.xml.j2
+    dest="{{ artifactory_tomcat_home | osPathJoin('conf', 'server.xml') }}"
+    mode=0600
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+
+- name: Copy certificate
+  sudo: yes
+  copy:
+    src="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.crt') }}"
+    dest="{{ '/tmp/' ~ customer_name ~ '-' ~ cage_name }}.crt"
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    mode=0644
+
+- name: Delete existing keystore
+  file: path={{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} state=absent
+  sudo: yes
+
+- name: Delete existing Artifactory keystore
+  file:
+    path="{{ artifactory_tomcat_home | osPathJoin('conf', 'ssl', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
+    state=absent
+  sudo: yes
+
+- name: Creating {{ customer_name ~ '-' ~ cage_name }} keystore
+  shell: "keytool -importkeystore -deststorepass {{ hostvars.localhost.jenkins_keystore_password }} -destkeypass {{ hostvars.localhost.jenkins_keystore_password }} -destkeystore {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} -srckeystore {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt' }} -srcstoretype PKCS12 -srcstorepass {{ hostvars.localhost.jenkins_keystore_password }} -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }}"
+  sudo: yes
+
+- name: Copy generated keystore to Artifactory
+  shell: "cp {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}} {{ artifactory_tomcat_home | osPathJoin('conf', 'ssl', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
+  sudo: yes
+
+- name: Set permissions on keystore
+  file:
+   path="{{ artifactory_tomcat_home | osPathJoin('conf', 'ssl', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
+   state=file
+   owner='{{ artifactory_user }}'
+   group='{{ artifactory_user }}'
+   mode=0700
+  sudo: yes
+
+- name: Generate x509 for importing
+  shell: "openssl pkcs12 -in {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}} -clcerts -nokeys -passin pass:{{ hostvars.localhost.jenkins_keystore_password }} | openssl x509 > {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }}"
+  sudo: yes
+
+# Throws an error if the alias is already there, but that's ok
+- name: Deleting alias from /etc/pki/java/cacerts
+  shell: "keytool -delete -storepass changeit -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+  sudo: yes
+  ignore_errors: true
+
+- name: Updating /etc/pki/java/cacerts
+  shell: "keytool -importcert -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -file {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+  sudo: yes

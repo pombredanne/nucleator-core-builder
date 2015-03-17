@@ -1,0 +1,32 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: ensure that S3CMD_INSTALL_DIR ("{{ S3CMD_INSTALL_DIR }}") exists
+  file: dest={{ S3CMD_INSTALL_DIR }}
+        state=directory
+
+- name: Get s3cmd source
+  get_url: dest={{ S3CMD_INSTALL_DIR }}/{{ S3CMD_INSTALL_TGZNAME }} url={{ S3CMD_INSTALL_URL }}
+
+- name: unpack s3cmd distribution
+  command: tar -zxf {{S3CMD_INSTALL_DIR}}/{{S3CMD_INSTALL_TGZNAME}}
+             --directory {{S3CMD_INSTALL_DIR}}
+             --overwrite --overwrite-dir
+
+- name: install s3cmd
+  shell: python setup.py install
+  args:
+    chdir: "{{S3CMD_INSTALL_DIR}}/{{S3CMD_UNPACKED_NAME}}"
+

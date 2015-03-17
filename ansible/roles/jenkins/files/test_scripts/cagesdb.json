@@ -1,0 +1,13 @@
+{
+    "container_types": [
+        "builder",
+        "beanstalk",
+        "redshift"
+    ],
+    "customers": [
+        {
+            "cages": [],
+            "name": "qa"
+        }
+    ]
+}

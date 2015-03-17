@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+<project>
+  <actions/>
+  <description>Use the &quot;Configure&quot; menu option to set your AWS access and secret keys.</description>
+  <displayName>Provision Roles in Customer Account</displayName>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition plugin="extensible-choice-parameter@1.2.2">
+          <name>Customer</name>
+          <description></description>
+          <editable>false</editable>
+          <choiceListProvider class="jp.ikedam.jenkins.plugins.extensible_choice_parameter.SystemGroovyChoiceListProvider">
+            <scriptText>import groovy.io.FileType
+def parent_path = &quot;/var/lib/jenkins/nucleator/siteconfig/ansible/roles/siteconfig/&quot; 
+def list = [] 
+def pattern = ~/([^-]+).yml/ 
+def dir = new File(parent_path+&quot;/vars&quot;) 
+dir.eachFileRecurse (FileType.FILES) {
+ file -&gt; def mat = pattern.matcher(file.name)
+ if(mat.matches() &amp;&amp; !file.name.startsWith(&quot;{&quot;) &amp;&amp; !file.name.equals(&quot;main.yml&quot;)) { 
+  list &lt;&lt; mat[0][1]
+ }
+}
+return list
+</scriptText>
+            <usePredefinedVariables>false</usePredefinedVariables>
+          </choiceListProvider>
+        </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>Account</name>
+          <description></description>
+          <defaultValue>test1</defaultValue>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>echo account &quot;$Account&quot; customer &quot;$Customer&quot;
+echo about to run nucleator account setup/rolespec provision/rolespec configure...
+ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
+AWS_ACCESS_KEY_ID=$AccessKey AWS_SECRET_ACCESS_KEY=$SecretKey PYTHONUNBUFFERED=1 nucleator account rolespec provision --account &quot;$Account&quot; --customer &quot;$Customer&quot; &amp;&amp; nucleator account rolespec validate --account &quot;$Account&quot; --customer &quot;$Customer&quot; &amp;&amp; nucleator account setup --account &quot;$Account&quot; --customer &quot;$Customer&quot;
+ENDSSH</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper>
+      <varPasswordPairs>
+        <varPasswordPair var="SecretKey" password="J0zcZBxaPy/aNn38vBZXvAUF480iWB2aZqSoNp1bqoc="/>
+        <varPasswordPair var="AccessKey" password="TFaFvNKsxQUhnE+KvV1QYQUF480iWB2aZqSoNp1bqoc="/>
+      </varPasswordPairs>
+    </com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper>
+  </buildWrappers>
+</project>

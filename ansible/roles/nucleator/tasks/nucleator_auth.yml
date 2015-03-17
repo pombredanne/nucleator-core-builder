@@ -1,0 +1,74 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: ensure local .ssh/distkeys exists as dir
+  local_action: stat
+    path="{{nucleator_configuration_dir | osPathJoin('distkeys', '') }}"
+    follow=yes
+  ignore_errors: true
+  register: distkeys_stat
+
+- name: log error when distkeys symlink target is missing
+  fail: msg='You do not appear to have a directory at ~/.ssh/distkeys. Create the directory and ensure that it contains all of the keys named in your .nucleator/distkeys.yml before running configure again.'
+  when: not distkeys_stat.stat.exists
+
+- name: ensure .ssh directory exists
+  file:
+    path=~/.ssh
+    state=directory
+    mode=0700
+
+- name: ensure .ssh/distkeys directory exists
+  file:
+    path=~/.ssh/distkeys
+    state=directory
+    mode=0700
+
+- name: install specified distribution keys
+  copy:
+    src="{{ nucleator_configuration_dir | osPathJoin("distkeys", item.private_keyfile) }}"
+    dest=~/.ssh/distkeys/
+    mode=0600
+  with_items: hostvars.localhost.distribution_keys
+
+- name: ensure that IdentifyFile for each Host is specified.
+  blockinfile:
+    dest=~/.ssh/config
+    mode=0600
+    create=yes
+    marker="# {mark} ANSIBLE MANAGED BLOCK - {{item.ssh_config_host}}"
+    content='Host {{item.ssh_config_host}}\n  Hostname {{item.hostname}}\n  IdentityFile ~/.ssh/distkeys/{{item.private_keyfile}}'
+  with_items: hostvars.localhost.distribution_keys
+
+- name: ensure that known_hosts contains hashes for hosts that we will interact with
+  lineinfile:
+    dest=~/.ssh/known_hosts
+    mode=0600
+    state=present
+    create=yes
+    insertbefore=BOF
+    regexp='^{{item.value | regex_escape}}$'
+    line='{{item.value}}'
+  with_dict:
+    hostvars.localhost.known_hosts
+
+# TODO for whatever reason ssh-keyscan of stash returns nothing :(
+# - name: ensure that known_hosts contains hashes for hosts that we will interact with
+#   shell: ssh-keyscan -t 'rsa,dsa' {{ item.hostname }} >> {{ '~' | osPathJoin('.ssh', 'known_hosts') }}
+#   with_items: hostvars.localhost.distribution_keys
+
+# - name: configure known_hosts for nucleator (Note the '>>')
+#   shell: ssh-keyscan -t rsa,dsa {{ hostvars['nucleator.' ~ cage_name ~ '.' ~ hostvars.localhost.customer_domain]['ec2_private_ip_address'] }} >> {{ jenkins.lib | osPathJoin('.ssh', 'known_hosts') }}
+#   sudo: yes

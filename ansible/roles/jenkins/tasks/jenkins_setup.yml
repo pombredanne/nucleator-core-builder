@@ -1,0 +1,81 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: Make jenkins dest readable
+  file: path={{jenkins_dest}} owner=jenkins group=jenkins recurse=yes state=directory mode=0777
+  sudo: yes
+
+- name: Create Jenkins user folder
+  file: path="{{ jenkins.lib }}/users/{{ hostvars.localhost.nucleator_userinterface.user }}" state=directory owner=jenkins group=jenkins mode=0755
+  sudo: yes
+
+- name: Copy password_hash.py
+  copy: src=scripts/password_hash.py dest="{{ pybin_dir }}/password_hash.py" owner=jenkins group=jenkins mode=0755
+  sudo: yes
+
+- name: Calculate admin password salt
+  shell: python {{ pybin_dir }}/password_hash.py gen_salt
+  register: password_salt
+
+- name: Calculate admin password hash
+  shell: python {{ pybin_dir }}/password_hash.py gen_pwd {{ password_salt.stdout}} {{ hostvars.localhost.nucleator_userinterface.password }}
+  register: password_hash
+
+- name: Configure Jenkins admin user
+  template: src=users-admin-config.xml.j2 dest={{ jenkins.lib }}/users/{{ hostvars.localhost.nucleator_userinterface.user }}/config.xml owner=jenkins group=jenkins mode=0644
+  sudo: yes
+
+- name: Configure Jenkins Maven Installer
+  sudo: yes
+  copy: src=hudson.tasks.Maven.xml dest={{ jenkins.lib }}/hudson.tasks.Maven.xml owner=jenkins group=jenkins mode=0644
+
+- name: Configure Jenkins Maven Options
+  sudo: yes
+  copy: src=hudson.maven.MavenModuleSet.xml dest={{ jenkins.lib }}/hudson.maven.MavenModuleSet.xml owner=jenkins group=jenkins mode=0644
+
+- name: Get Artifactory Scrambled password_hash
+  shell: echo -n '{{ hostvars.localhost.artifactory_userinterface.password }}' | base64
+  register: scrambled_artifactory_userinterface_password
+
+- name: Configure Jenkins Artifactory
+  sudo: yes
+  template: src=org.jfrog.hudson.ArtifactoryBuilder.xml.j2 dest={{ jenkins.lib }}/org.jfrog.hudson.ArtifactoryBuilder.xml owner=jenkins group=jenkins mode=0644
+
+# Path to the keystore in JKS format (as created by the JDK 'keytool').
+- name: Configure Path to keystore
+  when: ansible_os_family == 'RedHat'
+  sudo: yes
+  lineinfile:
+    dest='{{ jenkins.RedHat.conf_dir }}/jenkins'
+    regexp=^JENKINS_HTTPS_KEYSTORE=
+    line='JENKINS_HTTPS_KEYSTORE="{{ jenkins.lib | osPathJoin('secrets', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"'
+    state=present
+    create=yes
+    owner=jenkins
+    group=jenkins
+    mode=0644
+
+- name: Configure Password to keystore
+  when: hostvars.localhost.jenkins_keystore_password is defined and ansible_os_family == 'RedHat'
+  sudo: yes
+  lineinfile:
+    dest='{{ jenkins.RedHat.conf_dir }}/jenkins'
+    regexp=^JENKINS_HTTPS_KEYSTORE_PASSWORD=
+    line='JENKINS_HTTPS_KEYSTORE_PASSWORD="{{ hostvars.localhost.jenkins_keystore_password }}"'
+    state=present
+    create=yes
+    owner=jenkins
+    group=jenkins
+    mode=0644

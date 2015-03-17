@@ -1,0 +1,60 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: Configure Jenkins Memory
+  when: ansible_os_family == 'Debian'
+  sudo: yes
+  lineinfile: dest='{{ jenkins.deb.conf_dir }}/jenkins' regexp=^JAVA_ARGS= line='JAVA_ARGS=\"-Xmx2048m -Djava.awt.headless=true\"'
+
+- name: Configure Jenkins Memory
+  when: ansible_os_family == 'RedHat'
+  sudo: yes
+  lineinfile: dest='{{ jenkins.RedHat.conf_dir }}/jenkins' regexp=^JENKINS_JAVA_OPTIONS= line='JENKINS_JAVA_OPTIONS=\"-Xmx2048m\"'
+
+- name: See if the config.xml file exists
+  copy: src=config-firsttime.xml dest="{{ jenkins.lib }}/config.xml" force=no owner=jenkins group=jenkins mode=0755
+  sudo: yes
+  register: copy_result
+
+- name: Determine whether config needs tweaking
+  set_fact:
+#    config_needs_tweaked: "{{ copy_result.rc != 0}}"
+    config_needs_tweaked: True
+
+- name: Copy fixup script file
+  copy: src=scripts/fixup-config.py dest="{{ pybin_dir }}/fixup-config.py" owner=jenkins group=jenkins mode=0755
+  when: config_needs_tweaked
+  sudo: yes
+
+- name: Copy permissions data file
+  copy: src=scripts/permissions-list.txt dest="{{ jenkins.lib }}/permissions-list.txt" owner=jenkins group=jenkins mode=0755
+  when: config_needs_tweaked
+  sudo: yes
+
+# Install/update Jenkins views
+# TDB: could run a test to look for <authorizationStrategy class="hudson.security.GlobalMatrixAuthorizationStrategy">
+- name: Fixup config to turn on security
+  command: python {{ pybin_dir }}/fixup-config.py chdir="{{ jenkins.lib }}"
+  when: config_needs_tweaked
+  sudo: yes
+
+- name: Move in tweaked config
+  command: mv config-1.xml config.xml chdir="{{ jenkins.lib }}"
+  when: config_needs_tweaked
+  sudo: yes
+
+- name: Give config.xml proper ownership, attributes
+  file: path="{{ jenkins.lib }}/config.xml" state=file owner=jenkins group=jenkins mode=0755
+  sudo: yes

@@ -1,0 +1,126 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: validate that credentials variables are set for nucleator_userinterface password
+  fail: msg="Unable to find nucleator_userinterface.password, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.nucleator_userinterface.password is not defined
+
+- name: validate that credentials variables are set for artifactory user
+  fail: msg="Unable to find nucleator_userinterface.user, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.nucleator_userinterface.user is not defined
+
+- name: validate that credentials variables are set for artifactory password
+  fail: msg="Unable to find artifactory.password, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.artifactory_userinterface.password is not defined
+
+- name: validate that credentials variables are set for artifactory user
+  fail: msg="Unable to find artifactory.user, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.artifactory_userinterface.user is not defined
+
+- name: validate that the keystore password is set
+  debug: msg="Unable to read jenkins_keystore_password in customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.jenkins_keystore_password is not defined
+
+- name: validate that java keystore password is set
+  fail: msg="Unable to read jenkins_java_keystore_password, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: hostvars.localhost.jenkins_java_keystore_password is not defined
+
+- name: ensure local cert file exists
+  local_action: stat
+    path="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.crt') }}"
+    follow=yes
+  ignore_errors: true
+  register: cert_stat
+
+- name: log error when cert file is missing
+  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }}."
+  when: not cert_stat.stat.exists
+
+#
+# Install additional packages we require
+#
+# Python 2.6 is the system installed python :(
+- name: install pre-requisite packages (RedHat family)
+  yum: name={{ item }} state=installed
+  sudo: true
+  when: ansible_os_family == 'RedHat'
+  with_items:
+    - python26-pip
+
+- name: install pre-requisite packages (Debian family)
+  apt: name={{ item }} state=present
+  sudo: true
+  when: ansible_os_family == 'Debian'
+  with_items:
+    - python-pip
+    - python-apt
+
+####################################
+#when not vagrant, copy files to a known-good location
+#these could be owned by vagrant, since they are just for the duration of the build
+- name: Make sure dest py dirs are there
+  file: path="{{ pybin_dir }}" state=directory owner=jenkins group=jenkins mode=0755
+  sudo: yes
+
+- name: Make sure dest jobs dirs are there
+  file: path="{{ jobs_dir }}" state=directory owner=jenkins group=jenkins mode=0755
+  sudo: yes
+
+- name: Create shared folder (if not present in a Vagrant)
+  file: path="{{ shared_dir }}" state=directory mode=0777
+  sudo: yes
+
+- name: Fix bug in Ubuntu pythonhosted
+  file: path=/usr/local/lib/python2.7/dist-packages/requests state=absent
+  sudo: yes
+  when: ansible_distribution == 'Ubuntu'
+
+# Install the package "jenkinsapi"   executable=pip-2.7
+- name: Install jenkinsapi
+  pip: name=jenkinsapi state=present
+  sudo: yes
+
+- name: Jenkins setup
+  include: jenkins_setup.yml
+
+- name: Jenkins skinning
+  include: jenkins_skinning.yml
+
+- name: Create folders and copy nucleator stuff
+  include: folder_structure.yml
+
+- name: Jenkins jobs
+  include: jobs_config.yml
+
+- name: SSH setup
+  include: ssh_setup.yml
+
+- name: Jenkins hacks
+  include: jenkins_secure.yml
+
+- name: Restart service
+  service: name=jenkins state=restarted
+  sudo: yes
+
+- name: Wait on service to be started
+  service: name=jenkins state=started
+  sudo: yes
+
+- name: Wait for system to be ready
+  shell: NUI_USER={{ hostvars.localhost.nucleator_userinterface.user }} NUI_PWD={{ hostvars.localhost.nucleator_userinterface.password }} python {{ pybin_dir }}/jenkins.py {{jenkins_url}} wait-for-ready 20
+
+- name: Run the CheckoutSiteConfig job
+  shell: NUI_USER={{ hostvars.localhost.nucleator_userinterface.user }} NUI_PWD={{ hostvars.localhost.nucleator_userinterface.password }} python {{pybin_dir}}/jenkins.py {{jenkins_url}} run-job CheckoutSiteConfig
+  ignore_errors: yes

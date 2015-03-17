@@ -1,0 +1,59 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+global_user: vagrant
+global_use_sudo: False
+global_update_apt_cache: True
+
+artifactory:
+  Debian:
+    dependencies: # Artifactory dependencies
+    - 'openjdk-7-jre'
+    - 'openjdk-7-jdk'
+    - 'unzip'
+    - 'git'
+  RedHat:
+    dependencies: # Artifactory dependencies
+    - 'java-1.7.0-openjdk'
+    - 'java-1.7.0-openjdk-devel'
+    - 'unzip'
+    - 'git-all'
+
+#artifactory_port: 8081
+artifactory_webserver: False
+artifactory_dir: /usr/share
+artifactory_zip_dir: /tmp
+artifactory_zip_file_name: artifactory-3.4.2
+artifactory_zip_file: "{{ artifactory_zip_file_name }}.zip"
+artifactory_zip_file_path: "{{ artifactory_zip_dir }}/{{ artifactory_zip_file }}"
+artifactory_zip_url: http://dl.bintray.com/content/jfrog/artifactory/{{ artifactory_zip_file }}
+artifactory_version_dir: "{{ artifactory_dir }}/{{ artifactory_zip_file_name }}"
+
+artifactory_home: "{{ artifactory_version_dir }}"
+#artifactory_user: artifactory
+artifactory_user: root
+artifactory_user_home: /root
+artifactory_java_home:
+  Debian: "/usr/lib/jvm/java-7-openjdk-amd64"
+  RedHat: "/usr/lib/jvm/java-openjdk"
+artifactory_tomcat_home: "{{ artifactory_home }}/tomcat"
+
+# Warning - Be careful changing the settings below:
+#
+# This is used to store files that indicate that an operation has been run. Note that if you change this after you have
+# run the script, you may clobber your previous install and/or other bad things. I do not know if if /etc/ansible is
+# the best place to put these files but I wanted to avoid home directories in case the user that runs ansible ever changes.
+ansible_done_dir: /etc/ansible/.done
+
+artifactory_done_dir: "{{ ansible_done_dir }}/artifactory"
