@@ -22,7 +22,7 @@
 
 - name: log error when distkeys symlink target is missing
   fail: msg='You do not appear to have a directory at ~/.ssh/distkeys. Create the directory and ensure that it contains all of the keys named in your .nucleator/distkeys.yml before running configure again.'
-  when: not distkeys_stat.stat.exists
+  when: not distkeys_stat.stat.exists and hostvars.localhost.distribution_keys.0 is defined
 
 - name: ensure .ssh directory exists
   file:
