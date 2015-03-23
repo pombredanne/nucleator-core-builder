@@ -79,34 +79,37 @@ def fixupFile(filename, config_xml):
     print "Creating project '"+project_name+"'"
     job = api.create_job(project_name, job_def)
 
-def validatePomPath(host, repo, path, ApplicationFlavor):
-    import shutil
+def validatePomPath(host, repo, path, ApplicationFlavor, branch):
+    import shutil, shlex
     shutil.rmtree(repo, ignore_errors=True)
     import subprocess
     # ssh://stash.47lining.com:7999/lin/nucleator-core-builder.git
     cmd = "git clone "+host
-    # print "About to execute: "+cmd
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    output = process.communicate()
-    # output ('', "Cloning into 'nucleator-core-builder'...\n")
-    print output[1]
+    print "Cloning into '"+path+"'...\n"
+    subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+    os.chdir(repo)
+    if branch:
+        cmd = "git checkout "+branch
+        print "Changing to branch '"+branch+"'...\n"
+        subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
     # print "Checking for "+repo+"/"+path
     if ApplicationFlavor == 'java':
-        isthere = os.path.isfile(repo+"/"+path)
+        isthere = os.path.isfile(path)
     else:
-        isthere = os.path.isdir(repo+"/"+path)
+        isthere = os.path.isdir(path)
+    os.chdir("..")
     shutil.rmtree(repo, ignore_errors=True)
     return isthere
 
-def testForPomXml(GitRepoPath, PomPath, ApplicationFlavor):
+def testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
     if 'stash' in GitRepoPath:
-        return testForPomXmlStash(GitRepoPath, PomPath, ApplicationFlavor)
+        return testForPomXmlStash(GitRepoPath, PomPath, ApplicationFlavor, branch)
     if 'github' in GitRepoPath:
-        return testForPomXmlGitHub(GitRepoPath, PomPath, ApplicationFlavor)
+        return testForPomXmlGitHub(GitRepoPath, PomPath, ApplicationFlavor, branch)
     print "Unsupported Git repo"
     exit(1)
 
-def testForPomXmlStash(GitRepoPath, PomPath, ApplicationFlavor):
+def testForPomXmlStash(GitRepoPath, PomPath, ApplicationFlavor, branch):
     import re, urllib2, json
     git_pattern = re.compile('ssh:\/\/[a-zA-Z0-9.]*\@?([a-zA-Z0-9/.-]+?):?[0-9]*\/([a-zA-Z0-9/.-]+?)\/([a-zA-Z0-9.-]+)\.git')
     m = git_pattern.match(GitRepoPath)
@@ -119,14 +122,14 @@ def testForPomXmlStash(GitRepoPath, PomPath, ApplicationFlavor):
     print "Project: "+ project
     repo = m.group(3)
     print "Repo: "+repo
-    return validatePomPath(GitRepoPath, repo, PomPath, ApplicationFlavor)
+    return validatePomPath(GitRepoPath, repo, PomPath, ApplicationFlavor, branch)
 
 # From: https://github.com/47lining/nucleator-core-builder.git
 # TO: https://raw.githubusercontent.com/47lining/nucleator-core-builder/master/LICENSE
 #
 # This is still in progress.
 #
-def testForPomXmlGitHub(GitRepoPath, PomPath, ApplicationFlavor, branch="master"):
+def testForPomXmlGitHub(GitRepoPath, PomPath, ApplicationFlavor, branch):
     import re, urllib2, json
     git_pattern = re.compile('https:\/\/([a-zA-Z0-9/.-]+):?[0-9]*\/([a-zA-Z0-9/.-]+?)\/([a-zA-Z0-9.-]+)\.git')
     m = git_pattern.match(GitRepoPath)
@@ -139,7 +142,7 @@ def testForPomXmlGitHub(GitRepoPath, PomPath, ApplicationFlavor, branch="master"
     print "Project: "+ project
     repo = m.group(3)
     print "Repo: "+repo
-    return validatePomPath(GitRepoPath, repo, PomPath, ApplicationFlavor)
+    return validatePomPath(GitRepoPath, repo, PomPath, ApplicationFlavor, branch)
 
 #
 # When going thru the list of jobs, ignore -java if we're python
@@ -153,8 +156,10 @@ if __name__ == '__main__':
     ApplicationFlavor = sys.argv[2] # beanstalk:flavor
     GitRepoPath = sys.argv[4]
     PomPath = sys.argv[5]
-    # TODO Figure out authentication
-    if not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor):
+    branch = None
+    if len(sys.argv)==8:
+        branch = sys.argv[7]
+    if not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
         print "Please check spelling of repo and/or path to pom."
         exit(1)
     import __main__ as main

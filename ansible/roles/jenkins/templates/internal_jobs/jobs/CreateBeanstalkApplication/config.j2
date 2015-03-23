@@ -47,6 +47,11 @@
           <description>The path to the application in the above named Git repo (for a Java application, specify the pom.xml file)</description>
           <defaultValue>pom.xml</defaultValue>
         </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>RepoBranch</name>
+          <description>What branch of the repository has the code?</description>
+          <defaultValue>master</defaultValue>
+        </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
@@ -65,7 +70,7 @@ export ARTIFACTORY_URL="{{ 'https://artifactory.' ~ cage_name ~ '.' ~ hostvars.l
 export JENKINS_URL={{ jenkins_url }}
 export NUI_PWD={{ hostvars.localhost.nucleator_userinterface.password }}
 export NUI_USER={{ hostvars.localhost.nucleator_userinterface.user }}
-python $REPO_HOME/scripts/makeappjobs.py beanstalk $ApplicationType $ApplicationName $GitRepoPath $ApplicationPath $ARTIFACTORY_URL
+python $REPO_HOME/scripts/makeappjobs.py beanstalk $ApplicationType $ApplicationName $GitRepoPath $ApplicationPath $ARTIFACTORY_URL $RepoBranch
 </command>
     </hudson.tasks.Shell>
   </builders>

@@ -54,4 +54,4 @@ pybin_dir: /var/lib/jenkins/ansible/build
 jobs_dir: /var/lib/jenkins/ansible/internal_jobs
 shared_dir: /vagrant
 
-SampleProjectRepoUrl: ssh://git@stash.47lining.com:7999/lin/nucleator.git
+SampleProjectRepoUrl: https://github.com/47lining/nucleator.git
