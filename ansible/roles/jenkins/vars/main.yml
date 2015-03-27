@@ -34,6 +34,7 @@ plugins:
   - 'mask-passwords'
   - 'simple-theme-plugin'
   - 'jquery'
+  - 'ansicolor'
 startup_delay_s: 30
 email:
   smtp_host: 'mail.47lining.com'
