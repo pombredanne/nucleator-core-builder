@@ -17,6 +17,7 @@
 <project>
   <actions/>
   <description>Collect information sufficient to create a redshift stackset.  When a cluster is created, check the console output for the jdbc connection URL -- it will appear in &quot;stack_outputs&quot;.</description>
+  <displayName>Create Redshift Container for $ApplicationName</displayName>
   <keepDependencies>false</keepDependencies>
   <properties>
     <hudson.model.ParametersDefinitionProperty>
@@ -45,8 +46,8 @@ return list
           </choiceListProvider>
         </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
         <hudson.model.StringParameterDefinition>
-          <name>ApplicationName</name>
-          <description>The name of the application, only lowercase alphanumeric characters are allowed.</description>
+          <name>ContainerName</name>
+          <description>The name of the cluster, only lowercase alphanumeric characters are allowed.</description>
           <defaultValue></defaultValue>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
@@ -81,17 +82,11 @@ return list
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>echo $ApplicationName $DatabaseName
-CUST=&quot;$(echo &quot;$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
-CAGE=&quot;$(echo &quot;$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
+      <command>echo $$ClusterName $$DatabaseName
+CUST=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
+CAGE=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
 ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
-#nucleator redshift provision --customer lvsands --cage build
-#  --cluster_name $ApplicationName
-#  --database_name $DatabaseName
-#  --username $UserName
-#  --password $UserPassword
-#  --public $Public
-PYTHONUNBUFFERED=1 nucleator redshift provision --customer &quot;$CUST&quot; --cage &quot;$CAGE&quot; --cluster_name $ApplicationName --database_name $DatabaseName --username $UserName --password $UserPassword --public $Public
+PYTHONUNBUFFERED=1 nucleator redshift provision --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --cluster_name $$ClusterName --database_name $$DatabaseName --username $$UserName --password $$UserPassword --public $$Public
 ENDSSH</command>
     </hudson.tasks.Shell>
   </builders>
