@@ -160,7 +160,7 @@ if __name__ == '__main__':
     branch = None
     if len(sys.argv)==8:
         branch = sys.argv[7]
-    if not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
+    if len(GitRepoPath)>0 and not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
         print "Please check spelling of repo and/or path to pom."
         exit(1)
     import __main__ as main

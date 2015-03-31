@@ -35,7 +35,8 @@
   register: venv_in_usr_bin
 
 - name: set venv_home to /usr/bin
-  set_fact: venv_home = "/usr/bin"
+  set_fact:
+    venv_home: "/usr/bin"
   when: venv_in_usr_bin.stat.exists
 
 - name: see if virtualenv exists in /usr/local/bin
@@ -43,7 +44,8 @@
   register: venv_in_usr_local_bin
 
 - name: set venv_home to /usr/local/bin
-  set_fact: venv_home = "/usr/local/bin"
+  set_fact:
+    venv_home: "/usr/local/bin"
   when: venv_in_usr_local_bin.stat.exists
 
 - name: set error message if virtualenvwrapper is not where we expect

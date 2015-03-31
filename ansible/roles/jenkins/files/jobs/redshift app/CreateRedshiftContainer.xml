@@ -82,11 +82,11 @@ return list
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>echo $$ClusterName $$DatabaseName
+      <command>echo Creating Redshift cluster name $$ContainerName with database $$DatabaseName
 CUST=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
 CAGE=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
 ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
-PYTHONUNBUFFERED=1 nucleator redshift provision --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --cluster_name $$ClusterName --database_name $$DatabaseName --username $$UserName --password $$UserPassword --public $$Public
+PYTHONUNBUFFERED=1 nucleator redshift provision --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --cluster_name $$ContainerName --database_name $$DatabaseName --username $$UserName --password $$UserPassword --public $$Public
 ENDSSH</command>
     </hudson.tasks.Shell>
   </builders>
