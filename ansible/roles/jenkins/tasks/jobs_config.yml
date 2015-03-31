@@ -17,6 +17,17 @@
   copy: src=internal_jobs/jobs dest="{{ jobs_dir }}" owner=jenkins group=jenkins mode=0644
   sudo: yes
 
+- name: Write ec2 instance types from aws_service_config to file
+  lineinfile:
+    dest="{{ jenkins.lib | osPathJoin('nucleator', 'scripts', 'supported_ec2_instance_types.txt')}}"
+    line='{{ item }}'
+  with_items: supported_ec2_instance_types
+
+- name: Write RDS instance types from aws_service_config to file
+  lineinfile:
+    dest="{{ jenkins.lib | osPathJoin('nucleator', 'scripts', 'supported_rds_instance_types.txt')}}"
+  with_items: supported_rds_instance_types
+
 - name: Read SiteconfigGitUrl
   local_action: shell python {{ nucleator_configuration_dir | osPathJoin("contrib", "builder", "ansible", "roles", "jenkins", "files", "scripts", "get_siteconfig.py") }}
   register: SiteconfigGitUrl
