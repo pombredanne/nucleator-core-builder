@@ -37,7 +37,7 @@ return list</scriptText>
         <hudson.model.ChoiceParameterDefinition>
           <name>Tier</name>
           <description>AWS Tier of beanstalk to provision</description>
-          <choices class="java.util.Arrays$ArrayList">
+          <choices class="java.util.Arrays$$ArrayList">
             <a class="string-array">
               <string>webserver</string>
               <string>worker</string>

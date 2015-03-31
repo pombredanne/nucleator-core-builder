@@ -61,7 +61,7 @@ return list</scriptText>
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>echo Provisioning &quot;$ApplicationFlavor&quot; beanstalk &quot;$$ContainerName&quot; in &quot;$$CustomerCage&quot;
+      <command>echo Deleting &quot;$ApplicationFlavor&quot; beanstalk &quot;$$ContainerName&quot; in &quot;$$CustomerCage&quot;
 CUST=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
 CAGE=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
 ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
