@@ -93,6 +93,7 @@
   - CustomerAccountSetup
   - NucleatorUpdate
   - CustomerRolespecValidate
+  - RetrieveSshConfig
 
 # Install/update Jenkins jobs
 # For future reference: https://pythonhosted.org/jenkins-autojobs/ - creates jobs based on updates to a git repo
