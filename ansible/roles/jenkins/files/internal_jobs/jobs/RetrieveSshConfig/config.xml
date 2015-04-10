@@ -1,19 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!--
-# Copyright 2015 47Lining LLC.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
--->
 <project>
   <actions/>
   <description></description>
@@ -22,11 +7,28 @@
   <properties>
     <hudson.model.ParametersDefinitionProperty>
       <parameterDefinitions>
-        <hudson.model.StringParameterDefinition>
-          <name>Host</name>
-          <description>What remote host to retrieve from?</description>
-          <defaultValue>nucleator</defaultValue>
-        </hudson.model.StringParameterDefinition>
+        <jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition plugin="extensible-choice-parameter@1.2.2">
+          <name>CustomerCage</name>
+          <description>The customer and cage of the ssh-config to retrieve</description>
+          <editable>false</editable>
+          <choiceListProvider class="jp.ikedam.jenkins.plugins.extensible_choice_parameter.SystemGroovyChoiceListProvider">
+            <scriptText>import groovy.io.FileType
+def parent_path = &quot;/var/lib/jenkins/nucleator/siteconfig/ansible/roles/siteconfig&quot;
+def list = []
+def pattern = ~/([a-zA-Z0-9]+)-([a-zA-Z0-9]+).yml/
+
+def dir = new File(parent_path+&quot;/vars&quot;)
+dir.eachFileRecurse (FileType.FILES) { file -&gt;
+  def mat = pattern.matcher(file.name)
+  if(mat.matches() &amp;&amp; !file.name.startsWith(&quot;{&quot;)) {
+      println &quot;CustomerCage: &quot;+mat[0][1]+&quot;:&quot;+mat[0][2]
+    list &lt;&lt; mat[0][1]+&quot;:&quot;+mat[0][2]
+  }
+}
+return list</scriptText>
+            <usePredefinedVariables>false</usePredefinedVariables>
+          </choiceListProvider>
+        </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
@@ -39,7 +41,10 @@
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>scp -F ~/.ssh/config $Host:.ssh/config &quot;$WORKSPACE&quot;/$Host-ssh-config</command>
+      <command>CUST=&quot;$(echo &quot;$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
+CAGE=&quot;$(echo &quot;$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
+mkdir -p &quot;$WORKSPACE&quot;/$CUST
+scp -F ~/.ssh/config nucleator:.nucleator/ssh-config/$CUST/$CAGE &quot;$WORKSPACE&quot;/$CUST/$CAGE</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers/>
