@@ -8,10 +8,15 @@ Creating Self-signed Certificate
 
 openssl genrsa -out server.key 2048
 openssl req -new -out server.csr -key server.key
-openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.509
+NOTE:
+In the next step, make sure you put a password on the p12 file -
+otherwise you'll get a null reference exception when you try to import it.
+ (In case anyone else had this headache)
+openssl pkcs12 -export -in server.509 -inkey server.key \
+               -out server.crt -name some-alias \
+               -CAfile ca.crt -caname root
 
-Comments:
-Make sure you put a password on the p12 file - otherwise you'll get a null reference exception when you try to import it. (In case anyone else had this headache)
 
 Creating a Keystore
 -------------------
