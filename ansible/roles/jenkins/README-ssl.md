@@ -17,6 +17,8 @@ openssl pkcs12 -export -in server.509 -inkey server.key \
                -out server.crt -name some-alias \
                -CAfile ca.crt -caname root
 
+Password: P@ssw0rd
+Alias: 47lining-build-cert
 
 Creating a Keystore
 -------------------
