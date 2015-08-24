@@ -153,11 +153,18 @@
   shell: "openssl pkcs12 -in {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}} -clcerts -nokeys -passin pass:{{ hostvars.localhost.jenkins_keystore_password }} | openssl x509 > {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }}"
   sudo: yes
 
-# Throws an error if the alias is already there, but that's ok
-- name: Deleting alias from /etc/pki/java/cacerts
-  shell: "keytool -delete -storepass changeit -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+- name: Check for alias in /etc/pki/java/cacerts
+  shell: "keytool -list -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
   sudo: yes
   ignore_errors: true
+  register: keytool_list
+
+# Throws an error if the alias is already there, but that's ok
+- name: Deleting alias from /etc/pki/java/cacerts
+  shell: "keytool -delete -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"
+  sudo: yes
+  ignore_errors: true
+  when: keytool_list.stdout.find('{{ customer_name ~ "-" ~ cage_name ~ "-cert" }}') != -1
 
 - name: Updating /etc/pki/java/cacerts
   shell: "keytool -importcert -alias {{ customer_name ~ '-' ~ cage_name ~ '-cert' }} -file {{ '/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.509' }} -storepass {{ hostvars.localhost.jenkins_java_keystore_password }} -keystore /etc/pki/java/cacerts -noprompt"

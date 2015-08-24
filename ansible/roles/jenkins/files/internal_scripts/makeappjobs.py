@@ -28,9 +28,9 @@ import sys, os, httplib
 #  - $PomPath
 #  - $GroupId
 #  - $ArtifactId
-# 
+#  - $CodeBranch (optional)
 
-def fixupFile(filename, config_xml):
+def fixupFile(filename, config_xml, branch):
     #
     # fixup job template
     #
@@ -50,7 +50,8 @@ def fixupFile(filename, config_xml):
         GitRepoPath = GitRepoPath,
         PomPath = PomPath,
         ArtifactoryUrl = ArtifactoryUrl,
-        PomPathOnly = PomPathOnly
+        PomPathOnly = PomPathOnly,
+        CodeBranch = branch
     )
 
     jenkins_url = None
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     branch = None
     if len(sys.argv)==8:
         branch = sys.argv[7]
-    if not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
+    if len(GitRepoPath)>0 and not testForPomXml(GitRepoPath, PomPath, ApplicationFlavor, branch):
         print "Please check spelling of repo and/or path to pom."
         exit(1)
     import __main__ as main
@@ -175,4 +176,4 @@ if __name__ == '__main__':
             xml=myfile.read()
         if filename.endswith("-"+ApplicationFlavor+".xml"):
             filename = filename.replace("-"+ApplicationFlavor, '')
-        fixupFile(filename, xml)
+        fixupFile(filename, xml, branch)

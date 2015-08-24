@@ -75,5 +75,8 @@ ENDSSH</command>
         <varPasswordPair var="AccessKey" password="TFaFvNKsxQUhnE+KvV1QYQUF480iWB2aZqSoNp1bqoc="/>
       </varPasswordPairs>
     </com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper>
+    <hudson.plugins.ansicolor.AnsiColorBuildWrapper plugin="ansicolor@0.4.1">
+      <colorMapName>xterm</colorMapName>
+    </hudson.plugins.ansicolor.AnsiColorBuildWrapper>
   </buildWrappers>
 </project>

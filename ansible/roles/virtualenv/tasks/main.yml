@@ -30,19 +30,40 @@
   pip: name=virtualenvwrapper state=present
   sudo: true
 
+- name: see if virtualenv exists in /usr/bin
+  stat: path=/usr/bin/virtualenvwrapper_lazy.sh
+  register: venv_in_usr_bin
+
+- name: set venv_home to /usr/bin
+  set_fact:
+    venv_home: "/usr/bin"
+  when: venv_in_usr_bin.stat.exists
+
+- name: see if virtualenv exists in /usr/local/bin
+  stat: path=/usr/local/bin/virtualenvwrapper_lazy.sh
+  register: venv_in_usr_local_bin
+
+- name: set venv_home to /usr/local/bin
+  set_fact:
+    venv_home: "/usr/local/bin"
+  when: venv_in_usr_local_bin.stat.exists
+
+- name: set error message if virtualenvwrapper is not where we expect
+  fail: msg="No virtualenvwrapper.sh found in /usr/bin or /usr/local/bin"
+  when: venv_home is not defined
+
 - name: ensure virtualenv dir exists
-  file: 
+  file:
     path={{VIRTUAL_ENV_DIR}}
     state=directory
     mode=0775
 
 - name: create virtualenv
-  shell: "export WORKON_HOME={{VIRTUAL_ENV_DIR}} && source /usr/bin/virtualenvwrapper_lazy.sh && mkvirtualenv {{VIRTUAL_ENV_NAME}} -p {{PYTHON_EXE}}"
+  shell: "export WORKON_HOME={{VIRTUAL_ENV_DIR}} && source {{venv_home}}/virtualenvwrapper_lazy.sh && mkvirtualenv {{VIRTUAL_ENV_NAME}} -p {{PYTHON_EXE}}"
   args:
     creates: "{{VIRTUAL_ENV_DIR | osPathJoin(VIRTUAL_ENV_NAME)}}"
 
 - name: add virtualenv setup to bashrc so our virtualenv is used on startup
   blockinfile:
     dest=~/.bashrc
-    content="export WORKON_HOME={{VIRTUAL_ENV_DIR}}\nsource /usr/bin/virtualenvwrapper_lazy.sh\nworkon {{VIRTUAL_ENV_NAME}}"
-
+    content="export WORKON_HOME={{VIRTUAL_ENV_DIR}}\nsource {{venv_home}}/virtualenvwrapper_lazy.sh\nworkon {{VIRTUAL_ENV_NAME}}"

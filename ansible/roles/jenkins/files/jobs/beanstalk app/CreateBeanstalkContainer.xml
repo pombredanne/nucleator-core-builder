@@ -1,19 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!--
-# Copyright 2015 47Lining LLC.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
--->
 <project>
   <actions/>
   <description>Define a new beanstalk container and create a job which will create and provision the beanstalk in the given Cage.</description>
@@ -49,6 +34,81 @@ return list</scriptText>
           <description>The name of the new container</description>
           <defaultValue></defaultValue>
         </hudson.model.StringParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>Tier</name>
+          <description>AWS Tier of beanstalk to provision</description>
+          <choices class="java.util.Arrays$$ArrayList">
+            <a class="string-array">
+              <string>webserver</string>
+              <string>worker</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition plugin="extensible-choice-parameter@1.2.2">
+          <name>EC2_InstanceType</name>
+          <description>EC2 Instance Type to Provision</description>
+          <editable>false</editable>
+          <choiceListProvider class="jp.ikedam.jenkins.plugins.extensible_choice_parameter.SystemGroovyChoiceListProvider">
+            <scriptText>import groovy.io.FileType
+def parent_path = &quot;/var/lib/jenkins/nucleator/scripts&quot;
+def list = [&quot;- default -&quot;]
+new File(parent_path, &apos;supported_ec2_instance_types.txt&apos;).eachLine { line -&gt;
+    list.add(line)
+}
+return list</scriptText>
+            <usePredefinedVariables>false</usePredefinedVariables>
+          </choiceListProvider>
+        </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
+        <jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition plugin="extensible-choice-parameter@1.2.2">
+          <name>DatabaseInstanceType</name>
+          <description>Database instance type to provision</description>
+          <editable>false</editable>
+          <choiceListProvider class="jp.ikedam.jenkins.plugins.extensible_choice_parameter.SystemGroovyChoiceListProvider">
+            <scriptText>import groovy.io.FileType
+def parent_path = &quot;/var/lib/jenkins/nucleator/scripts&quot;
+def list = [&quot;- None -&quot;]
+new File(parent_path, &apos;supported_rds_instance_types.txt&apos;).eachLine { line -&gt;
+    list.add(line)
+}
+return list</scriptText>
+            <usePredefinedVariables>false</usePredefinedVariables>
+          </choiceListProvider>
+        </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>DatabaseName</name>
+          <description>Database Name</description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>DatabaseUser</name>
+          <description>Database User</description>
+          <defaultValue>admin</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.PasswordParameterDefinition>
+          <name>DatabasePassword</name>
+          <description>Password for the database user</description>
+          <defaultValue>+piyC/Gkdso+O2/iqofNzA==</defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MinScale</name>
+          <description>Minimum size of autoscaling group (default 1)</description>
+          <defaultValue>1</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>MaxScale</name>
+          <description>Maximum size of autoscaling group (default 4)</description>
+          <defaultValue>4</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ServiceRole</name>
+          <description>Role to associate with instance profile (Change this if this instance will have special requirements and you have created another role for it.)</description>
+          <defaultValue>NucleatorBeanstalkServiceRunner</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>QueueUrl</name>
+          <description>The URL of a queue you want a worker tier beanstalk to use instead of creating one itself.</description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
@@ -64,11 +124,55 @@ return list</scriptText>
       <command>echo Provisioning &quot;$ApplicationFlavor&quot; beanstalk &quot;$$ContainerName&quot; in &quot;$$CustomerCage&quot;
 CUST=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
 CAGE=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
+TierArg=&quot;&quot;
+EITArg=&quot;&quot;
+DBTArg=&quot;&quot;
+DBNArg=&quot;&quot;
+DBUArg=&quot;&quot;
+DBPArg=&quot;&quot;
+MNSArg=&quot;&quot;
+MXSArg=&quot;&quot;
+SVRArg=&quot;&quot;
+QURArg=&quot;&quot;
+if [[ -n &quot;$$Tier&quot; ]]; then
+  TierArg=&quot;--tier $$Tier&quot;
+fi
+if [[ -n &quot;$$EC2_InstanceType&quot; &amp;&amp; &quot;$$EC2_InstanceType&quot; != &quot;- default -&quot; ]]; then
+  EITArg=&quot;--beanstalk_instance_type &apos;$$EC2_InstanceType&apos;&quot;
+fi
+if [[ -n &quot;$$DatabaseInstanceType&quot; &amp;&amp; &quot;$$DatabaseInstanceType&quot; != &quot;- None -&quot; ]]; then
+  DBTArg=&quot;--database_instance_type &apos;$$DatabaseInstanceType&apos;&quot;
+  if [[ -n &quot;$$DatabaseName&quot; ]]; then
+    DBNArg=&quot;--database_name &apos;$$DatabaseName&apos;&quot;
+  fi
+  if [[ -n &quot;$$DatabaseUser&quot; ]]; then
+    DBUArg=&quot;--database_user &apos;$$DatabaseUser&apos;&quot;
+  fi
+  if [[ -n &quot;$$DatabasePassword&quot; ]]; then
+    DBPArg=&quot;--database_password &apos;$$DatabasePassword&apos;&quot;
+  fi
+fi
+if [[ -n &quot;$$MinScale&quot; ]]; then
+  MNSArg=&quot;--minscale $$MinScale&quot;
+fi
+if [[ -n &quot;$$MaxScale&quot; ]]; then
+  MXSArg=&quot;--maxscale $$MaxScale&quot;
+fi
+if [[ -n &quot;$$ServiceRole&quot; ]]; then
+  SVRArg=&quot;--service_role $$ServiceRole&quot;
+fi
+if [[ -n &quot;$$QueueUrl&quot; ]]; then
+  QURArg=&quot;--queue_url $$QueueUrl&quot;
+fi
 ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
-PYTHONUNBUFFERED=1 nucleator beanstalk provision --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --type &quot;$ApplicationFlavor&quot; --app_name &quot;$$ContainerName&quot; &amp;&amp; nucleator beanstalk configure --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --app_name &quot;$$ContainerName&quot;
+PYTHONUNBUFFERED=1 nucleator beanstalk provision --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --type &quot;$ApplicationFlavor&quot; --app_name &quot;$$ContainerName&quot; $$TierArg $$EITArg $$DBTArg $$DBNArg $$DBUArg $$DBPArg $$MNSArg $$MXSArg $$SVRArg $$QURArg &amp;&amp; nucleator beanstalk configure --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --app_name &quot;$$ContainerName&quot;
 ENDSSH</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers/>
-  <buildWrappers/>
+  <buildWrappers>
+    <hudson.plugins.ansicolor.AnsiColorBuildWrapper plugin="ansicolor@0.4.1">
+      <colorMapName>xterm</colorMapName>
+    </hudson.plugins.ansicolor.AnsiColorBuildWrapper>
+  </buildWrappers>
 </project>

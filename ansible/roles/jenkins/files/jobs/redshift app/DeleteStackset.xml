@@ -16,32 +16,39 @@
 -->
 <project>
   <actions/>
-  <description>NOT CURRENTLY SUPPORTED</description>
+  <description>Delete a Redshift cluster in the given cage.</description>
+  <displayName>Delete Redshift Container for $ApplicationName</displayName>
   <keepDependencies>false</keepDependencies>
   <properties>
     <hudson.model.ParametersDefinitionProperty>
       <parameterDefinitions>
         <jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition plugin="extensible-choice-parameter@1.2.2">
-          <name>CustomerCageContainer</name>
-          <description></description>
+          <name>CustomerCage</name>
+          <description>In what cage is this cluster?</description>
           <editable>false</editable>
           <choiceListProvider class="jp.ikedam.jenkins.plugins.extensible_choice_parameter.SystemGroovyChoiceListProvider">
-            <scriptText>slurper = new groovy.json.JsonSlurper()
-result = slurper.parse(new FileReader(new File(&quot;/var/lib/jenkins/cagesdb.json&quot;)))
-def names = []
-result.customers.each() {
-  custname = it.name
-  it.cages.each() {
-    cagename = it.name
-    it.containers.each() {
-      names.add(custname+&quot;:&quot;+cagename+&quot;:&quot;+it.name)
-    }
+            <scriptText>import groovy.io.FileType
+def parent_path = &quot;/var/lib/jenkins/nucleator/siteconfig/ansible/roles/siteconfig&quot;
+def list = []
+def pattern = ~/([a-zA-Z0-9]+)-([a-zA-Z0-9]+).yml/
+
+def dir = new File(parent_path+&quot;/vars&quot;)
+dir.eachFileRecurse (FileType.FILES) { file -&gt;
+  def mat = pattern.matcher(file.name)
+  if(mat.matches() &amp;&amp; !file.name.startsWith(&quot;{&quot;)) {
+      println &quot;CustomerCage: &quot;+mat[0][1]+&quot;:&quot;+mat[0][2]
+    list &lt;&lt; mat[0][1]+&quot;:&quot;+mat[0][2]
   }
 }
-return names</scriptText>
+return list</scriptText>
             <usePredefinedVariables>false</usePredefinedVariables>
           </choiceListProvider>
         </jp.ikedam.jenkins.plugins.extensible__choice__parameter.ExtensibleChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ContainerName</name>
+          <description>The name of the Redshift cluster to delete</description>
+          <defaultValue></defaultValue>
+        </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
@@ -54,14 +61,18 @@ return names</scriptText>
   <concurrentBuild>false</concurrentBuild>
   <builders>
     <hudson.tasks.Shell>
-      <command>echo Deleting stack set $CustomerCageContainer
-CUST=&quot;$(echo &quot;$CustomerCageContainer&quot; | cut -d &apos;:&apos; -f 1)&quot;
-CAGE=&quot;$(echo &quot;$CustomerCageContainer&quot; | cut -d &apos;:&apos; -f 2)&quot;
-CONT=&quot;$(echo &quot;$CustomerCageContainer&quot; | cut -d &apos;:&apos; -f 3)&quot;
-export REPO_HOME=$JENKINS_HOME/nucleator
-python $REPO_HOME/scripts/cagesdb.py container delete --customer &quot;$CUST&quot; --cage &quot;$CAGE&quot; --name &quot;$CONT&quot;</command>
+      <command>echo Deleting redshift &quot;$$ContainerName&quot; in &quot;$$CustomerCage&quot;
+CUST=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 1)&quot;
+CAGE=&quot;$$(echo &quot;$$CustomerCage&quot; | cut -d &apos;:&apos; -f 2)&quot;
+ssh -F ~/.ssh/config ec2-user@nucleator &lt;&lt; ENDSSH
+PYTHONUNBUFFERED=1 nucleator redshift delete --customer &quot;$$CUST&quot; --cage &quot;$$CAGE&quot; --cluster_name &quot;$$ContainerName&quot;
+ENDSSH</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers/>
-  <buildWrappers/>
+  <buildWrappers>
+    <hudson.plugins.ansicolor.AnsiColorBuildWrapper plugin="ansicolor@0.4.1">
+      <colorMapName>xterm</colorMapName>
+    </hudson.plugins.ansicolor.AnsiColorBuildWrapper>
+  </buildWrappers>
 </project>
