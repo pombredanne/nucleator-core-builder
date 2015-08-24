@@ -47,7 +47,12 @@ class Builder(Command):
         builder_delete.add_argument("--customer", required=True, action=ValidateCustomerAction, help="Name of customer from nucleator config")
         builder_delete.add_argument("--cage", required=True, help="Name of cage from nucleator config")
 
-        
+        # keypair_sync subcommand
+        builder_kpsynch=builder_subparsers.add_parser('keypair_sync', help="synchronize keypair files (*.pem) between local machine and nucleator")
+        builder_kpsynch.add_argument("--customer", required=True, action=ValidateCustomerAction, help="Name of customer from nucleator config")
+        builder_kpsynch.add_argument("--cage", required=True, help="Name of cage from nucleator config")
+
+
     def provision(self, **kwargs):
         """
         Provisions a Stackset that includes Nucleator, Jenkins and Artifactory instances 
@@ -68,7 +73,7 @@ class Builder(Command):
         }
 
         extra_vars["builder_deleting"]=kwargs.get("builder_deleting", False) 
-        
+
         command_list = []
         command_list.append("account")
         command_list.append("cage")
@@ -80,7 +85,7 @@ class Builder(Command):
                                  is_static=True, # dynamic inventory not required
                                  **extra_vars
         )
-        
+
     def configure(self, **kwargs):
         """
         Configures the Nucleator, Jenkins and Artifactory instances deployed by the 
@@ -98,7 +103,7 @@ class Builder(Command):
             "cli_stackset_instance_name": "singleton",
             "verbosity": kwargs.get("verbosity", None),
         }
-        
+
         command_list = []
         command_list.append("builder")
 
@@ -118,6 +123,35 @@ class Builder(Command):
         """
         kwargs["builder_deleting"]=True
         return self.provision(**kwargs)
+
+    def keypair_sync(self, **kwargs):
+        """
+        Synchronizing the keypair files locally to/from nucleator-ui, nucleator.
+        """
+        cli = Command.get_cli(kwargs)
+        cage = kwargs.get("cage", None)
+        customer = kwargs.get("customer", None)
+        if cage is None or customer is None:
+            raise ValueError("cage and customer must be specified")
+        extra_vars={
+            "cage_name": cage,
+            "customer_name": customer,
+            "verbosity": kwargs.get("verbosity", None),
+        }
+
+        command_list = []
+        command_list.append("builder")
+
+        inventory_manager_rolename = "NucleatorBuilderInventoryManager"
+
+        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None)) # pushes credentials into environment
+
+        return cli.safe_playbook(
+            self.get_command_playbook("rsync_pem.yml"),
+            inventory_manager_rolename,
+            **extra_vars
+        )
+
 
 # Create the singleton for auto-discovery
 command = Builder()

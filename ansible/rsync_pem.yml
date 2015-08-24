@@ -1,0 +1,84 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  pre_tasks:
+  - name: estabish playbook args
+    set_fact:
+      aws_environment_with_rolenames: "{{aws_environment_with_rolenames}}"
+  roles:
+    - config
+    - siteconfig
+    - blockinfile # dynamically loaded action plugin
+    - propagate_tags
+
+  vars:
+    cage_name: "{{cage_name}}"
+    customer_name: "{{customer_name}}"
+    bastion_hostname:
+
+- hosts: tag_NucleatorCage_{{cage_name}}:&tag_NucleatorCustomer_{{customer_name}}
+  user: ec2-user
+  connection: local
+  gather_facts: False
+
+  roles:
+    - nucleatorgroups
+
+- hosts: MATCH_NUCLEATORGROUP__nucleator
+  user: ec2-user
+  tasks:
+    - name: Sync the pem files TO nucleator
+      copy:
+        src={{nucleator_configuration_dir}}/{{item | basename}}
+        dest={{nucleator_configuration_dir}}/
+      with_fileglob:
+        - "{{nucleator_configuration_dir}}/*pem"
+
+    - name: List the pem files FROM nucleator
+      shell: ls {{nucleator_configuration_dir}}/*pem
+      register: remote_pem_files
+
+    - name: Copy the pem files FROM nucleator
+      fetch:
+        src={{nucleator_configuration_dir}}/{{item | basename}}
+        dest={{nucleator_configuration_dir}}/
+      with_items: remote_pem_files.stdout_lines
+
+# Nucleator isn't installed on the nucleator-ui box, the pem files
+# will be in ~/.ssh for the jenkins user, which is likely root.
+- hosts: MATCH_NUCLEATORGROUP__nucleator-ui
+  user: ec2-user
+  tasks:
+    - name: Sync the pem files TO nucleator
+      sudo: yes
+      copy:
+        src={{nucleator_configuration_dir}}/{{item | basename}}
+        dest=/root/.ssh
+      with_fileglob:
+        - "{{nucleator_configuration_dir}}/*pem"
+
+    - name: List the pem files FROM nucleator
+      sudo: yes
+      shell: ls /root/.ssh/*pem
+      register: remote_pem_files
+
+    - name: Copy the pem files FROM nucleator
+      fetch:
+        src=/root/.ssh/{{item | basename}}
+        dest={{nucleator_configuration_dir}}/
+      with_items: remote_pem_files.stdout_lines
