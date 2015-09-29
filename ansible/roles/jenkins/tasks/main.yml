@@ -45,7 +45,7 @@
   register: cert_stat
 
 - name: log error when cert file is missing
-  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }}. For secure communication with your provisioned infrastructure, you must provide a certificate for each nucleator Cage in your nucleator siteconfig.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to: https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
+  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }}. For secure communication with your provisioned infrastructure, you must provide a certificate for each nucleator Cage in your nucleator siteconfig.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
   when: not cert_stat.stat.exists
 
 #
