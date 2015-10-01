@@ -20,11 +20,14 @@
   sudo: true
   when: ansible_os_family == 'RedHat'
   with_items:
-    - python26-pip
     - python27
     - python27-pip
     - python27-devel
     - gcc
+
+- name: point alternatives to python2.7
+  command: update-alternatives --set python /usr/bin/python2.7
+  sudo: true
 
 - name: sudo pip install virtualenvwrapper
   pip: name=virtualenvwrapper state=present
@@ -59,11 +62,11 @@
     mode=0775
 
 - name: create virtualenv
-  shell: "export WORKON_HOME={{VIRTUAL_ENV_DIR}} && source {{venv_home}}/virtualenvwrapper_lazy.sh && mkvirtualenv {{VIRTUAL_ENV_NAME}} -p {{PYTHON_EXE}}"
+  shell: "export WORKON_HOME={{VIRTUAL_ENV_DIR}}; export VIRTUALENVWRAPPER_PYTHON={{PYTHON_EXE}}; export PATH={{venv_home}}:$PATH; source {{venv_home}}/virtualenvwrapper_lazy.sh && mkvirtualenv {{VIRTUAL_ENV_NAME}} -p {{PYTHON_EXE}}"
   args:
     creates: "{{VIRTUAL_ENV_DIR | osPathJoin(VIRTUAL_ENV_NAME)}}"
 
 - name: add virtualenv setup to bashrc so our virtualenv is used on startup
   blockinfile:
     dest=~/.bashrc
-    content="export WORKON_HOME={{VIRTUAL_ENV_DIR}}\nsource {{venv_home}}/virtualenvwrapper_lazy.sh\nworkon {{VIRTUAL_ENV_NAME}}"
+    content="export WORKON_HOME={{VIRTUAL_ENV_DIR}}\nexport VIRTUALENVWRAPPER_PYTHON={{PYTHON_EXE}}\nexport PATH={{venv_home}}:$PATH\nsource {{venv_home}}/virtualenvwrapper_lazy.sh\nworkon {{VIRTUAL_ENV_NAME}}"
