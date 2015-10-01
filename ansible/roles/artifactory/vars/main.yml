@@ -19,14 +19,14 @@ global_update_apt_cache: True
 artifactory:
   Debian:
     dependencies: # Artifactory dependencies
-    - 'openjdk-7-jre'
-    - 'openjdk-7-jdk'
+    - 'openjdk-8-jre'
+    - 'openjdk-8-jdk'
     - 'unzip'
     - 'git'
   RedHat:
     dependencies: # Artifactory dependencies
-    - 'java-1.7.0-openjdk'
-    - 'java-1.7.0-openjdk-devel'
+    - 'java-1.8.0-openjdk'
+    - 'java-1.8.0-openjdk-devel'
     - 'unzip'
     - 'git-all'
 
