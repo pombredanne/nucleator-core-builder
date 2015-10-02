@@ -34,6 +34,13 @@
 - name: nucleator init on remote host
   shell: "nucleator init"
 
+# ansible modules (e.g. cloudformation) invoked on localhost will be executed from
+# /usr/bin/python unless ansible_python_interpreter is set in host_vars/localhost
+- name: set ansible_python_interpreter to python interpreter in virtualenv
+  lineinfile:
+    dest = {{ nucleator_dynamic_hosts_path | osPathJoin("host_vars", "localhost") }}
+    line = 'ansible_python_interpreter: {{VIRTUAL_ENV_DIR | osPathJoin(VIRTUAL_ENV_NAME, "bin", "python")}}'
+    
 - name: copy nucleator.pem to remote host
   copy:
     src={{ nucleator_configuration_dir }}/{{hostvars.localhost.keypair_name}}.pem
