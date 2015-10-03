@@ -55,6 +55,7 @@
   with_items:
     - sources.yml
     - distkeys.yml
+    - config.yml
 
 - name: copy per-account uuids
   copy:
