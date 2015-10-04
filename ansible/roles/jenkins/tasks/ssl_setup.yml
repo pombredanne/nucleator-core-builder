@@ -60,12 +60,12 @@
   register: keytool_list
 
 # Throws an error if the alias is already there, but that's ok
-- name: Deleting alias from java cacert keystore
+- name: Delete alias from java cacert keystore
   shell: "keytool -delete -alias {{ssl.keystore_cert_alias}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
   sudo: yes
   ignore_errors: true
   when: keytool_list.stdout.find('{{ssl.keystore_cert_alias}}') != -1
 
-- name: Updating java cacert keystore
-  shell: "keytool -importcert -alias {{ssl.keystore_cert_alias}} -file {{ssl.tmp_certificate}} -storepass {{java_cacert_keystore_password}} -keystore {{java_cacert_keystore}} -noprompt"
+- name: Update java cacert keystore
+  shell: "keytool -importcert -alias {{ssl.keystore_cert_alias}} -file {{ssl.tmp_certificate}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
   sudo: yes
