@@ -29,23 +29,23 @@
   fail: msg="Unable to find artifactory.user, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
   when: hostvars.localhost.artifactory_userinterface.user is not defined
 
-- name: validate that the keystore password is set
-  debug: msg="Unable to read jenkins_keystore_password in customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
-  when: hostvars.localhost.jenkins_keystore_password is not defined
+- name: validate that the pkcs12 bundle password is set
+  debug: msg="Unable to read pkcs12_bundle_password from customer credentials file at {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: ssl.pkcs12_password is not defined
 
 - name: validate that java keystore password is set
-  fail: msg="Unable to read jenkins_java_keystore_password, check customer credentials file in {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
-  when: hostvars.localhost.jenkins_java_keystore_password is not defined
+  fail: msg="Unable to read java_cacert_keystore_password from customer credentials file at {{ nucleator_configuration_dir | osPathJoin(customer_name ~ '-credentials.yml')}}"
+  when: ssl.java_cacert_keystore_password is not defined
 
 - name: ensure local cert file exists
   local_action: stat
-    path="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.crt') }}"
+    path="{{ssl.src_pkcs12}}"
     follow=yes
   ignore_errors: true
   register: cert_stat
 
 - name: log error when cert file is missing
-  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }}. For secure communication with your provisioned infrastructure, you must provide a certificate for each nucleator Cage in your nucleator siteconfig.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
+  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }} at {{ssl.src_pkcs12}}. For secure communication with your provisioned infrastructure, the builder stackset requires that you provide a certificate appropriate for use with the jenkins and artifactory instances that it provisions and configues.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
   when: not cert_stat.stat.exists
 
 #

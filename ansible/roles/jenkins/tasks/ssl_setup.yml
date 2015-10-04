@@ -16,8 +16,8 @@
 - name: Copy pkcs12 certificate container to target machine
   sudo: yes
   copy:
-    src="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.pkcs12') }}"
-    dest="{{ ssl.tmp_pkcs12 }}"
+    src="{{ssl.src_pkcs12}}"
+    dest="{{ssl.tmp_pkcs12}}"
     owner=jenkins
     group=jenkins
     mode=0644

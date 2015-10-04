@@ -59,8 +59,9 @@ ansible_done_dir: /etc/ansible/.done
 artifactory_done_dir: "{{ ansible_done_dir }}/artifactory"
 
 ssl:
+  src_pkcs12: "{{nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.pkcs12')}}"
   tmp_pkcs12: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.pkcs12'}}"
-  pkcs12_password: "{{hostvars.localhost.jenkins_keystore_password}}"
+  pkcs12_password: "{{hostvars.localhost.pkcs12_bundle_password}}"
   tmp_keystore: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}}"
   keystore_cert_alias: "{{customer_name ~ '-' ~ cage_name ~ '-cert'}}"
   tmp_certificate: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}}"
