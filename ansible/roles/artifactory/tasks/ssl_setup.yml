@@ -83,7 +83,7 @@
   sudo: yes
 
 - name: Check for alias in java cacert keystore
-  shell: "keytool -list -storepass {{ssl.java_cacert_keystore_password}} -keystore {{java_cacert_keystore}} -noprompt"
+  shell: "keytool -list -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
   sudo: yes
   ignore_errors: true
   register: keytool_list
