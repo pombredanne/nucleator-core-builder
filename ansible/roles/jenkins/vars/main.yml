@@ -56,3 +56,14 @@ jobs_dir: /var/lib/jenkins/ansible/internal_jobs
 shared_dir: /vagrant
 
 SampleProjectRepoUrl: https://github.com/47lining/nucleator.git
+
+ssl:
+  tmp_pkcs12: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.pkcs12'}}"
+  pkcs12_password: "{{hostvars.localhost.jenkins_keystore_password}}"
+  tmp_keystore: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}}"
+  keystore_cert_alias: "{{customer_name ~ '-' ~ cage_name ~ '-cert'}}"
+  tmp_certificate: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}}"
+  app_keystore: "{{jenkins.lib | osPathJoin('secrets', customer_name ~ '-' ~ cage_name ~ '.keystore')}}"
+  java_cacert_keystore: /etc/pki/java/cacerts
+  java_cacert_keystore_password: "{{hostvars.localhost.java_cacert_keystore_password}}"
+

@@ -63,8 +63,11 @@
               line='{{ artifactory_user }} hard nofile 32000'
               state=present
 
-  - name: Reconfigure Tomcat for SSL
-    include: ssl-setup.yml
+  - name: ssh setup
+    include: ssh_setup.yml
+
+  - name: SSL setup
+    include: ssl_setup.yml
 
   - name: artifactory | Start/Restart artifactory
     service: name=artifactory state=restarted

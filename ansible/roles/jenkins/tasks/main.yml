@@ -104,8 +104,11 @@
 - name: Jenkins jobs
   include: jobs_config.yml
 
-- name: SSH setup
+- name: ssh setup
   include: ssh_setup.yml
+
+- name: SSL setup
+  include: ssl_setup.yml
 
 - name: Jenkins hacks
   include: jenkins_secure.yml

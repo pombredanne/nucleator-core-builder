@@ -1,0 +1,100 @@
+# Copyright 2015 47Lining LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: assure tomcat/conf/ssl exists as dir
+  sudo: yes
+  file:
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    path={{ artifactory_tomcat_home | osPathJoin('conf', 'ssl')}}
+    state=directory
+    mode=0700
+
+- name: Copy password_hash.py
+  copy: src=scripts/password_hash.py dest="/tmp/password_hash.py"
+
+- name: Calculate admin password hash
+  shell: python /tmp/password_hash.py CAFEBABEEBABEFAC {{ hostvars.localhost.artifactory_userinterface.password }}
+  register: password_hash
+
+- name: Copy security bootstrap file
+  sudo: yes
+  template: src=security.xml.j2 dest={{ artifactory_version_dir }}/etc/security.import.xml owner={{ artifactory_user }} group={{ artifactory_user }} mode=0644
+
+- name: Configure the server.xml to add the SSL Connector
+  sudo: yes
+  template:
+    src=server.xml.j2
+    dest="{{ artifactory_tomcat_home | osPathJoin('conf', 'server.xml') }}"
+    mode=0600
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+
+- name: Copy pkcs12 certificate container to target machine
+  sudo: yes
+  copy:
+    src="{{ nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.pkcs12') }}"
+    dest="{{ssl.tmp_pkcs12}}"
+    owner='{{ artifactory_user }}'
+    group='{{ artifactory_user }}'
+    mode=0644
+
+- name: Delete existing keystore
+  file: path={{ssl.tmp_keystore}} state=absent
+  sudo: yes
+
+- name: Delete existing application keystore
+  file:
+    path="{{ssl.app_keystore}}"
+    state=absent
+  sudo: yes
+
+- name: Creating {{ customer_name ~ '-' ~ cage_name }} keystore
+  shell: "keytool -importkeystore -deststorepass {{ssl.pkcs12_password}} -destkeypass {{ssl.pkcs12_password}} -destkeystore {{ssl.tmp_keystore}} -srckeystore {{ssl.tmp_pkcs12}} -srcstoretype PKCS12 -srcstorepass {{ssl.pkcs12_password}} -alias {{ssl.keystore_cert_alias}}"
+  sudo: yes
+
+- name: Copy generated keystore to application lib
+  shell: "cp {{ssl.tmp_keystore}} {{ssl.app_keystore}}"
+  sudo: yes
+
+- name: Set permissions on application lib keystore
+  file:
+   path="{{ssl.app_keystore}}"
+   state=file
+   owner='{{ artifactory_user }}'
+   group='{{ artifactory_user }}'
+   mode=0700
+  sudo: yes
+
+- name: Generate x509 for importing
+  shell: "openssl pkcs12 -in {{ssl.tmp_pkcs12}} -clcerts -nokeys -passin pass:{{ssl.pkcs12_password}} | openssl x509 > {{ssl.tmp_certificate}}"
+  sudo: yes
+
+- name: Check for alias in java cacert keystore
+  shell: "keytool -list -storepass {{ssl.java_cacert_keystore_password}} -keystore {{java_cacert_keystore}} -noprompt"
+  sudo: yes
+  ignore_errors: true
+  register: keytool_list
+
+# Throws an error if the alias is already there, but that's ok
+- name: Deleting alias from java cacert keystore
+  shell: "keytool -delete -alias {{ssl.keystore_cert_alias}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
+  sudo: yes
+  ignore_errors: true
+  when: keytool_list.stdout.find('{{ssl.keystore_cert_alias}}') != -1
+
+- name: Updating java cacert keystore
+  shell: "keytool -importcert -alias {{ssl.keystore_cert_alias}} -file {{ssl.tmp_certificate}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
+  sudo: yes

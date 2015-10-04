@@ -1,10 +1,89 @@
-README-ssl.md
+Builder Stackset SSL Setup
+==========================
 
-This file describes the process for enabling ssl with a self-signed certificate and existing keys.
+This README describes the process for enabling ssl for jenkins and
+artifactory through a user-provided certificate, private key, and
+Certificate-Authority-provided bundle of certificates required to
+establish chain-of-trust.
+
+You can provide a certificate that you have procured that is signed by
+a trusted Certificate Authority (CA), or a certificate that you have
+signed yourself.
+
+Required Certificate-Related Files and Passwords
+------------------------------------------------
+
+The builder stackset expects the following files to be in place:
+
+    ~/.nucleator/siteconfig/<customer>-<cage>.pkcs12
+
+`<customer>-<cage>.pkcs12` is a pkcs12-format certificate bundle that
+is expected to include the X-509 certificate signed by yourself or
+your chosen CA, the private key used to generate the certificate, and
+a CA.crt bundle of certificates used to validate chain-of-trust, if
+provided by your certificate authority.
+
+The stackset expects to find the certificate bundle within the
+siteconfig for your nucleator installation.
+
+This stackset uses the following passwords, specified in
+`~/.nucleator/<customer>-credentials.yml`
+
+    #
+    # This is the password that will be used by the builder stackset
+    # to access the provided pkcs12-format bundle of SSL certificates
+    # and private keys, and to set up application-specific keystores
+    # (e.g. for Jenkins and Artifactory).
+    # 
+    # You can set this to whatever you would like, provided that the
+    # <customer>-<cage>.pkcs12 certificate bundle that you provide in
+    # your siteconfig was generated and is accessible using this password.
+    #
+    pkcs12_bundle_password: add_password_here
+    
+    #
+    # This is the password used to maintain java's cacert keystore.
+    # The default as shipped for most java distributions is 'changeit'
+    # You shouldn't need to change this unless you have taken explicit action
+    # to change from this default.
+    #
+    java_cacert_keystore_password: changeit
+    
+Generating Required Certificate-Related Files
+---------------------------------------------
+
+You can procure an SSL Certificate from a Certificate Authority (CA) of your
+choice, in which case the Certificate will be signed by your chosen CA.
+
+Alternatively, you can act as your own Certificate Authority and, and create
+a Self-Signed Certificate.
+
+If you wish to create a self-signed certificate, you can do so using the
+make-certificate-bundle script.  The script can be found in the
+nucleator-core-siteconfig repository at
+
+    ansible/roles/siteconfig/vars/make-certificate-bundle
+
+It's usage is:
+
+    make-certificate-bundle <customer> <cage> <customer-domain> <password>
+
+For example:
+
+    make-certificate-bundle example build example.yourdomain.com Arb1trary!
+
+To ensure that downstream nucleator stacksets will be able to access
+the certificate bundle that you are providing, be sure the password you
+use here matches the password value entered for pkcs12_bundle_password
+in the corresponding customer credentials file at
+`~/.nucleator/<customer>-credentials.yml`.
 
 
-Creating Self-signed Certificate
---------------------------------
+
+Appendix - Useful opensll information
+-------------------------------------
+
+The remainder of this document is retrained here solely for reference and historic purposes.
 
 ```
 openssl genrsa -out server.key 2048
@@ -25,8 +104,7 @@ openssl pkcs12 -export -in server.509 -inkey server.key \
 Password: P@ssw0rd
 Alias: 47lining-build-cert
 
-Creating a Keystore
--------------------
+#### Creating a Keystore
 
 From: http://cunning.sharp.fm/2008/06/importing_private_keys_into_a.html:
 
@@ -50,8 +128,7 @@ keytool -importkeystore \
 
 The alias of 1 is required to choose the certificate in the source PKCS12 file, keytool isn't clever enough to figure out which certificate you want in a store containing one certificate.
 
-STEPS
------
+#### STEPS
 
 ```
 ec2-user@nucleator-ui.build:~/.ssh$ openssl req -new -out server.csr -key 47lining.pem
@@ -98,8 +175,8 @@ ec2-user@nucleator-ui.build:~/.ssh$ keytool -importkeystore -deststorepass P@ssw
 
 Yields server.keystore.
 
-ADD TO JAVA
------------
+#### ADD TO JAVA
+
 ```
 sudo keytool -importcert -alias nui-cert -file nucleator-ui.crt -keystore /etc/pki/java/cacerts -noprompt -keypass changeit
 ```
