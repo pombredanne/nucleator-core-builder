@@ -63,7 +63,7 @@ nucleator:
 
 nucleatorui:
   cage_extension_resources:
-    NucleatorUIWebIngess:
+    NucleatorUIWebIngress:
       Type: "AWS::EC2::SecurityGroupIngress"
       Properties:
         GroupId: "{{nucleatorui_security_group_id}}"
@@ -87,10 +87,18 @@ nucleatorui:
         FromPort: "7999"
         ToPort: "7999"
         CidrIp: "0.0.0.0/0"
+    NucleatorUIToGitSsh:
+      Type: "AWS::EC2::SecurityGroupEgress"
+      Properties:
+        GroupId: "{{nucleatorui_security_group_id}}"
+        IpProtocol: "tcp"
+        FromPort: "22"
+        ToPort: "22"
+        CidrIp: "0.0.0.0/0"
 
 artifactory:
   cage_extension_resources:
-    ArtifactoryWebIngess:
+    ArtifactoryWebIngress:
       Type: "AWS::EC2::SecurityGroupIngress"
       Properties:
         GroupId: "{{artifactory_security_group_id}}"
