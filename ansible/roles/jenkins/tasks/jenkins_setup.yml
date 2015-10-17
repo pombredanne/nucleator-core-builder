@@ -68,12 +68,12 @@
     mode=0644
 
 - name: Configure Password to keystore
-  when: hostvars.localhost.jenkins_keystore_password is defined and ansible_os_family == 'RedHat'
+  when: ssl.pkcs12_password is defined and ansible_os_family == 'RedHat'
   sudo: yes
   lineinfile:
     dest='{{ jenkins.RedHat.conf_dir }}/jenkins'
     regexp=^JENKINS_HTTPS_KEYSTORE_PASSWORD=
-    line='JENKINS_HTTPS_KEYSTORE_PASSWORD="{{ hostvars.localhost.jenkins_keystore_password }}"'
+    line='JENKINS_HTTPS_KEYSTORE_PASSWORD="{{ ssl.pkcs12_password }}"'
     state=present
     create=yes
     owner=jenkins
