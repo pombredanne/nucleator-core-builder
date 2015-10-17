@@ -78,12 +78,14 @@ use here matches the password value entered for pkcs12_bundle_password
 in the corresponding customer credentials file at
 `~/.nucleator/<customer>-credentials.yml`.
 
-
+Once you have generated all of the required `.pkcs12` bundles, commit them
+to your personal siteconfig.  Be sure to then run `nucleator update` so that
+your change become available to nucleator.
 
 Appendix - Useful opensll information
 -------------------------------------
 
-The remainder of this document is retrained here solely for reference and historic purposes.
+The remainder of this document is retained here solely for reference and historic purposes.
 
 ```
 openssl genrsa -out server.key 2048
