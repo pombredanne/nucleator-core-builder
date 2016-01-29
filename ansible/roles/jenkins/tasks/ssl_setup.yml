@@ -16,8 +16,8 @@
 - name: Copy pkcs12 certificate container to target machine
   sudo: yes
   copy:
-    src="{{ssl.src_pkcs12}}"
-    dest="{{ssl.tmp_pkcs12}}"
+    src="{{ssl.src_certificate}}"
+    dest="{{ssl.tmp_certificate}}"
     owner=jenkins
     group=jenkins
     mode=0644
@@ -32,25 +32,8 @@
     state=absent
   sudo: yes
 
-- name: Creating {{ customer_name ~ '-' ~ cage_name }} keystore
-  shell: "keytool -importkeystore -deststorepass {{ ssl.pkcs12_password }} -destkeypass {{ ssl.pkcs12_password }} -destkeystore {{ssl.tmp_keystore}} -srckeystore {{ssl.tmp_pkcs12}} -srcstoretype PKCS12 -srcstorepass {{ ssl.pkcs12_password }} -alias {{ ssl.keystore_cert_alias }}"
-  sudo: yes
-
-- name: Copy generated keystore to application lib
-  shell: "cp {{ssl.tmp_keystore}} {{ssl.app_keystore}}"
-  sudo: yes
-
-- name: Set permissions on application lib keystore
-  file:
-   path="{{ssl.app_keystore}}"
-   state=file
-   owner=jenkins
-   group=jenkins
-   mode=0700
-  sudo: yes
-
 - name: Generate x509 for importing
-  shell: "openssl pkcs12 -in {{ssl.tmp_pkcs12}} -clcerts -nokeys -passin pass:{{ssl.pkcs12_password}} | openssl x509 > {{ssl.tmp_certificate}}"
+  shell: "openssl pkcs12 -in {{ssl.tmp_certificate}} -clcerts -nokeys -passin pass:{{ssl.pkcs12_password}} | openssl x509 > {{ssl.tmp_pkcs12}}"
   sudo: yes
 
 - name: Check for alias in java cacert keystore
@@ -67,5 +50,22 @@
   when: keytool_list.stdout.find('{{ssl.keystore_cert_alias}}') != -1
 
 - name: Update java cacert keystore
-  shell: "keytool -importcert -alias {{ssl.keystore_cert_alias}} -file {{ssl.tmp_certificate}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
+  shell: "keytool -importcert -alias {{ssl.keystore_cert_alias}} -file {{ssl.tmp_pkcs12}} -storepass {{ssl.java_cacert_keystore_password}} -keystore {{ssl.java_cacert_keystore}} -noprompt"
+  sudo: yes
+
+- name: Creating {{ customer_name ~ '-' ~ cage_name }} keystore
+  shell: "keytool -importkeystore -deststorepass {{ ssl.pkcs12_password }} -destkeypass {{ ssl.pkcs12_password }} -destkeystore {{ssl.tmp_keystore}} -srckeystore {{ssl.tmp_certificate}} -srcstoretype PKCS12 -srcstorepass {{ ssl.pkcs12_password }} -alias {{ ssl.keystore_cert_alias }}"
+  sudo: yes
+
+- name: Copy generated keystore to application lib
+  shell: "cp {{ssl.tmp_keystore}} {{ssl.app_keystore}}"
+  sudo: yes
+
+- name: Set permissions on application lib keystore
+  file:
+   path="{{ssl.app_keystore}}"
+   state=file
+   owner=jenkins
+   group=jenkins
+   mode=0700
   sudo: yes
