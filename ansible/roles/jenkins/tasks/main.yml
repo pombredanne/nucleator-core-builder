@@ -39,13 +39,13 @@
 
 - name: ensure local cert file exists
   local_action: stat
-    path="{{ssl.src_pkcs12}}"
+    path="{{ssl.src_certificate}}"
     follow=yes
   ignore_errors: true
   register: cert_stat
 
 - name: log error when cert file is missing
-  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }} at {{ssl.src_pkcs12}}. For secure communication with your provisioned infrastructure, the builder stackset requires that you provide a certificate appropriate for use with the jenkins and artifactory instances that it provisions and configues.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
+  fail: msg="You do not appear to have a certificate for {{ customer_name ~ '-' ~ cage_name }} at {{ssl.src_certificate}}. For secure communication with your provisioned infrastructure, the builder stackset requires that you provide a certificate appropriate for use with the jenkins and artifactory instances that it provisions and configues.  You can use certificates provided by a certificate authority, or certificates that you create and sign yourself.  To learn how to do this please refer to https://github.com/47lining/nucleator-core-builder/blob/master/ansible/roles/jenkins/README-ssl.md"
   when: not cert_stat.stat.exists
 
 #

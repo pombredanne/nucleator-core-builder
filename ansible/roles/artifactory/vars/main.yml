@@ -58,12 +58,14 @@ ansible_done_dir: /etc/ansible/.done
 
 artifactory_done_dir: "{{ ansible_done_dir }}/artifactory"
 
+# src_pkcs12: "{{nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.pkcs12')}}"
+
 ssl:
-  src_pkcs12: "{{nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.pkcs12')}}"
   tmp_pkcs12: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.pkcs12'}}"
   pkcs12_password: "{{hostvars.localhost.pkcs12_bundle_password}}"
   tmp_keystore: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.keystore'}}"
   keystore_cert_alias: "{{customer_name ~ '-' ~ cage_name ~ '-cert'}}"
+  src_certificate: "{{nucleator_configuration_dir | osPathJoin('siteconfig', customer_name ~ '-' ~ cage_name ~ '.crt')}}"
   tmp_certificate: "{{'/tmp/' ~ customer_name ~ '-' ~ cage_name ~ '.crt'}}"
   app_keystore: "{{ artifactory_tomcat_home | osPathJoin('conf', 'ssl', customer_name ~ '-' ~ cage_name ~ '.keystore') }}"
   java_cacert_keystore: /etc/pki/java/cacerts
