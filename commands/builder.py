@@ -70,6 +70,7 @@ class Builder(Command):
             "cli_stackset_name": "builder",
             "cli_stackset_instance_name": "singleton",
             "verbosity": kwargs.get("verbosity", None),
+            "debug_credentials": kwargs.get("debug_credentials", None),
         }
 
         extra_vars["builder_deleting"]=kwargs.get("builder_deleting", False) 
@@ -79,7 +80,7 @@ class Builder(Command):
         command_list.append("cage")
         command_list.append("builder")
 
-        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None))
+        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None), debug_credentials=kwargs.get("debug_credentials", None))
         
         return cli.safe_playbook(self.get_command_playbook("builder_provision.yml"),
                                  is_static=True, # dynamic inventory not required
@@ -102,6 +103,7 @@ class Builder(Command):
             "cli_stackset_name": "builder",
             "cli_stackset_instance_name": "singleton",
             "verbosity": kwargs.get("verbosity", None),
+            "debug_credentials": kwargs.get("debug_credentials", None),
         }
 
         command_list = []
@@ -109,7 +111,7 @@ class Builder(Command):
 
         inventory_manager_rolename = "NucleatorBuilderInventoryManager"
 
-        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None)) # pushes credentials into environment
+        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None), debug_credentials=kwargs.get("debug_credentials", None)) # pushes credentials into environment
 
         return cli.safe_playbook(
             self.get_command_playbook("builder_configure.yml"),
@@ -137,6 +139,7 @@ class Builder(Command):
             "cage_name": cage,
             "customer_name": customer,
             "verbosity": kwargs.get("verbosity", None),
+            "debug_credentials": kwargs.get("debug_credentials", None),
         }
 
         command_list = []
@@ -144,7 +147,7 @@ class Builder(Command):
 
         inventory_manager_rolename = "NucleatorBuilderInventoryManager"
 
-        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None)) # pushes credentials into environment
+        cli.obtain_credentials(commands = command_list, cage=cage, customer=customer, verbosity=kwargs.get("verbosity", None), debug_credentials=kwargs.get("debug_credentials", None)) # pushes credentials into environment
 
         return cli.safe_playbook(
             self.get_command_playbook("rsync_pem.yml"),
